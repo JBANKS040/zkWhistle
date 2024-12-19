@@ -7,3 +7,6 @@
 [submodule "lib/jwt-tx-builder"]
 	path = lib/jwt-tx-builder
 	url = https://github.com/zkemail/jwt-tx-builder
+[submodule "lib/circomlib"]
+	path = lib/circomlib
+	url = https://github.com/iden3/circomlib

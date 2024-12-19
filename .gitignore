@@ -1,14 +1,60 @@
 # Compiler files
 cache/
 out/
+node_modules/
 
 # Ignores development broadcast logs
 !/broadcast
 /broadcast/*/31337/
 /broadcast/**/dry-run/
 
+# Circuit compilation outputs
+*.r1cs
+*.sym
+*.wasm
+*.zkey
+*_js/
+witness.wtns
+proof.json
+public.json
+verification_key.json
+*.ptau
+
+# Debug files
+*.log
+
 # Docs
 docs/
 
 # Dotenv file
 .env
+.env.*
+
+# Coverage
+coverage/
+coverage.json
+
+# Hardhat/Foundry artifacts
+artifacts/
+forge-cache/
+typechain/
+typechain-types/
+
+# IDE & OS specific files
+.idea/
+.vscode/
+.DS_Store
+*.swp
+*.swo
+
+# ZK specific
+build/
+generated/
+*.ptau
+proving.key
+verification.key
+
+# Misc
+.tmp/
+temp/
+dist/
