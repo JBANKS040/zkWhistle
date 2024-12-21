@@ -66,27 +66,19 @@ contract ZkWhistle is Initializable, Ownable, ReentrancyGuard, Pausable {
     /// @param proof The ZK proof of JWT validity
     /// @param publicInputs Public inputs for proof verification
     function verifyWhistleblower(
-        bytes calldata proof,
-        uint256[] calldata publicInputs
-    ) external whenNotPaused nonReentrant returns (bool) {
-        // Verify the proof using the verifier contract
-        (bool success, ) = verifier.staticcall(
-            abi.encodeWithSignature(
-                "verifyProof(bytes,uint256[])",
-                proof,
-                publicInputs
-            )
-        );
+        uint256[2] memory a,
+        uint256[2][2] memory b, 
+        uint256[2] memory c,
+        uint256[2] memory input
+    ) public whenNotPaused {
+        // Add input validation
+        require(input[1] > block.timestamp, "JWT expired");
         
-        if (!success) revert InvalidProof();
-
-        // Extract expiry from public inputs
-        uint256 expiry = publicInputs[0];
-        if (block.timestamp > expiry) revert ExpiredJWT();
-
-        verifiedWhistleblowers[msg.sender] = true;
-        emit WhistleblowerVerified(msg.sender, bytes32(publicInputs[1]));
-        return true;
+        // Verify the proof
+        require(verifier.verifyProof(a, b, c, input), "Invalid proof");
+        
+        // Record verification
+        emit WhistleblowerVerified(msg.sender, bytes32(input[0]));
     }
 
     /// @notice Submit a whistleblower report
