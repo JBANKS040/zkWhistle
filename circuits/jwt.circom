@@ -4,7 +4,7 @@ include "../lib/jwt-tx-builder/packages/circuits/jwt-verifier.circom";
 include "../lib/circomlib/circuits/poseidon.circom";
 
 template JWTWhistleblower(max_header_bytes, max_payload_bytes) {
-    // Basic JWT verification inputs
+    // Basic JWT verification inputss
     signal input message[max_header_bytes + max_payload_bytes];
     signal input messageLength;
     signal input pubkey[17];
@@ -40,3 +40,4 @@ template JWTWhistleblower(max_header_bytes, max_payload_bytes) {
 }
 
 component main = JWTWhistleblower(256, 512);
+// Test commit
