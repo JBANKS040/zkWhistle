@@ -1,10 +1,19 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.19;
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
-import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import {Pausable} from "@openzeppelin/contracts/security/Pausable.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
+
+interface IJWTVerifier {
+    function verifyProof(
+        uint[2] calldata _pA,
+        uint[2][2] calldata _pB,
+        uint[2] calldata _pC,
+        uint[2] calldata _pubSignals
+    ) external view returns (bool);
+}
 
 /// @title ZkWhistle
 /// @notice Anonymous whistleblowing system using ZK proofs
@@ -43,8 +52,8 @@ contract ZkWhistle is Initializable, Ownable, ReentrancyGuard, Pausable {
     mapping(uint256 => Report) public reports;
     uint256 public reportCount;
 
-    // Verifier contract address
-    address public verifier;
+    // Verifier contract
+    IJWTVerifier public verifier;
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -55,7 +64,7 @@ contract ZkWhistle is Initializable, Ownable, ReentrancyGuard, Pausable {
         __Ownable_init(msg.sender);
         __ReentrancyGuard_init();
         __Pausable_init();
-        verifier = _verifier;
+        verifier = IJWTVerifier(_verifier);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -63,22 +72,27 @@ contract ZkWhistle is Initializable, Ownable, ReentrancyGuard, Pausable {
     //////////////////////////////////////////////////////////////*/
 
     /// @notice Verify a whistleblower using JWT proof
-    /// @param proof The ZK proof of JWT validity
-    /// @param publicInputs Public inputs for proof verification
+    /// @param a Proof parameter A
+    /// @param b Proof parameter B
+    /// @param c Proof parameter C
+    /// @param input Public inputs (organization hash and expiration)
     function verifyWhistleblower(
-        uint256[2] memory a,
-        uint256[2][2] memory b, 
-        uint256[2] memory c,
-        uint256[2] memory input
+        uint[2] calldata a,
+        uint[2][2] calldata b, 
+        uint[2] calldata c,
+        uint[2] calldata input
     ) public whenNotPaused {
-        // Add input validation
-        require(input[1] > block.timestamp, "JWT expired");
+        // Verify expiration
+        if (input[1] <= block.timestamp) revert ExpiredJWT();
         
         // Verify the proof
-        require(verifier.verifyProof(a, b, c, input), "Invalid proof");
+        if (!verifier.verifyProof(a, b, c, input)) revert InvalidProof();
         
-        // Record verification
-        emit WhistleblowerVerified(msg.sender, bytes32(input[0]));
+        // Mark whistleblower as verified
+        verifiedWhistleblowers[msg.sender] = true;
+        
+        // Emit event with organization hash
+        emit WhistleblowerVerified(msg.sender, bytes32(uint256(input[0])));
     }
 
     /// @notice Submit a whistleblower report
@@ -116,7 +130,7 @@ contract ZkWhistle is Initializable, Ownable, ReentrancyGuard, Pausable {
     /// @notice Update the verifier contract address
     /// @param _verifier New verifier address
     function updateVerifier(address _verifier) external onlyOwner {
-        verifier = _verifier;
+        verifier = IJWTVerifier(_verifier);
     }
 
     /// @notice Pause the contract

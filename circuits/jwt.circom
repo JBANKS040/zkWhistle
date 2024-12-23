@@ -40,4 +40,3 @@ template JWTWhistleblower(max_header_bytes, max_payload_bytes) {
 }
 
 component main = JWTWhistleblower(256, 512);
-// Test commit
