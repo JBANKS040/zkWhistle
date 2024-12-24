@@ -1,18 +1,20 @@
 {
   "compilerOptions": {
-    "target": "ESNext",
-    "module": "commonjs",
-    "strict": true,
+    "target": "es2020",
+    "module": "ES2020",
+    "moduleResolution": "node",
     "esModuleInterop": true,
+    "strict": true,
+    "outDir": "dist",
+    "declaration": true,
     "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true,
-    "typeRoots": [
-      "./node_modules/@types",
-      "./node_modules"
-    ]
+    "allowJs": true,
+    "resolveJsonModule": true
   },
-  "include": [
-    "src/**/*.ts",
-    "src/**/*.sol"
-  ]
+  "ts-node": {
+    "esm": true,
+    "experimentalSpecifiers": true
+  },
+  "include": ["script/**/*", "test/**/*"],
+  "exclude": ["node_modules"]
 }

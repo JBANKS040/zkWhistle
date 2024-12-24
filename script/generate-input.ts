@@ -1,9 +1,14 @@
-import { generateJWTVerifierInputs } from '../lib/jwt-tx-builder/packages/helpers/src/input-generators';
-import { generateJWT } from '../lib/jwt-tx-builder/packages/helpers/src/jwt';
+import { generateJWT } from '../src/helpers/jwt-generator';
+import { generateJWTAuthenticatorInputs } from '../src/helpers/jwt-authenticator';
 import { writeFileSync } from 'fs';
-import { join } from 'path';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
+
+// Get __dirname equivalent in ESM
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 async function generateInput() {
+    // Generate a test JWT
     const kid = BigInt('0x5aaff47c21d06e266cce395b2145c7c6d4730ea5');
     const header = {
         alg: 'RS256',
@@ -12,24 +17,32 @@ async function generateInput() {
     };
     
     const payload = {
-        org: "testorg",
+        iss: "auth.example.com",
+        sub: "1234567890",
+        aud: "api.example.com",
         exp: Math.floor(Date.now() / 1000) + 3600,
-        iss: "test-issuer",
+        nbf: Math.floor(Date.now() / 1000),
         iat: Math.floor(Date.now() / 1000),
-        azp: "test-authorized-party",
-        email: "test@example.com",
-        nonce: "Send 0.12 ETH to 0x1234"
+        jti: "unique-token-id",
+        email: "employee@google.com"
     };
 
+    // Generate JWT and get public key
     const { rawJWT, publicKey } = generateJWT(header, payload);
-    const inputs = await generateJWTVerifierInputs(rawJWT, publicKey, {
-        maxMessageLength: 768
+
+    // Generate circuit inputs
+    const inputs = await generateJWTAuthenticatorInputs(rawJWT, publicKey, {
+        maxMessageLength: 768 // 256 + 512 from our circuit parameters
     });
 
+    // Write inputs to file
     writeFileSync(
-        join(__dirname, '../circuits/jwt_js/input.json'),
+        join(__dirname, '../circuits/EmailJWT_js/input.json'),
         JSON.stringify(inputs, null, 2)
     );
+
+    console.log('Generated JWT:', rawJWT);
+    console.log('Inputs written to circuits/EmailJWT_js/input.json');
 }
 
 generateInput().catch(console.error);

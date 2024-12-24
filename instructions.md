@@ -112,18 +112,6 @@ Ensure that verification of proofs is only for a limited time based on the JWT's
 
 ---
 
-# Reference Documentation
-- Zk-Email Docs:
-  - [JWT TX Builder Overview](https://docs.zk.email/jwt-tx-builder/)
-  - [Setup](https://docs.zk.email/jwt-tx-builder/setup)
-  - [Architecture](https://docs.zk.email/jwt-tx-builder/architecture)
-  - [Packages](https://docs.zk.email/jwt-tx-builder/packages/)
-  - [Circuits](https://docs.zk.email/jwt-tx-builder/packages/circuits)
-  - [Helpers](https://docs.zk.email/jwt-tx-builder/packages/helpers)
-  - [Contracts](https://docs.zk.email/jwt-tx-builder/packages/contracts)
-
----
-
 # Notes for Developers
 - Ensure **client-side proof generation** is implemented securely.
 - Use **IPFS** for PDF storage and store only hashes on-chain.

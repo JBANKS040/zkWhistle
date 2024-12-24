@@ -1,3 +1,2 @@
-forge-std/=lib/forge-std/src/
-@openzeppelin/=lib/openzeppelin-contracts/
-jwt-tx-builder/=lib/jwt-tx-builder/ 
+@openzeppelin/=node_modules/@openzeppelin/
+forge-std/=lib/forge-std/src/ 

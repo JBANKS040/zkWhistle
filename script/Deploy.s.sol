@@ -1,24 +1,24 @@
-// SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
-import {Script, console2} from "forge-std/Script.sol";
-import {ZkWhistle} from "../src/ZkWhistle.sol";
+import "forge-std/Script.sol";
+import "../src/contracts/Whistleblower.sol";
+import "../src/contracts/Verifier.sol";
 
-contract Deploy is Script {
-    function setUp() public {}
-
-    function run() public {
+contract DeployScript is Script {
+    function run() external {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
-        address verifier = vm.envAddress("VERIFIER_ADDRESS");
-
         vm.startBroadcast(deployerPrivateKey);
 
-        // Deploy ZkWhistle
-        ZkWhistle whistleblower = new ZkWhistle();
-        whistleblower.initialize(verifier);
+        // Deploy Verifier first
+        Groth16Verifier verifier = new Groth16Verifier();
+        
+        // Deploy Whistleblower with Verifier address
+        Whistleblower whistleblower = new Whistleblower(address(verifier));
 
         vm.stopBroadcast();
 
-        console2.log("ZkWhistle deployed to:", address(whistleblower));
+        console.log("Verifier deployed to:", address(verifier));
+        console.log("Whistleblower deployed to:", address(whistleblower));
     }
 } 
