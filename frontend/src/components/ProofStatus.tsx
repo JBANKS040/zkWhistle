@@ -11,7 +11,7 @@ interface StepStatus {
   contractSubmission: Status;
 }
 
-export function ProofStatus({ proof }: { proof: any }) {
+export function ProofStatus({ proof, decodedJwt }: { proof: any; decodedJwt: any }) {
   const [status, setStatus] = useState<StepStatus>({
     jwtGeneration: 'pending',
     proofGeneration: 'pending',
@@ -20,13 +20,21 @@ export function ProofStatus({ proof }: { proof: any }) {
   });
 
   useEffect(() => {
-    if (proof) {
+    if (decodedJwt) {
       setStatus(prev => ({
         ...prev,
         jwtGeneration: 'success',
+        proofGeneration: 'loading'
+      }));
+    }
+  }, [decodedJwt]);
+
+  useEffect(() => {
+    if (proof?.proof && proof?.publicSignals) {
+      setStatus(prev => ({
+        ...prev,
         proofGeneration: 'success',
-        proofComplete: 'success',
-        contractSubmission: 'pending'
+        proofComplete: 'success'
       }));
     }
   }, [proof]);

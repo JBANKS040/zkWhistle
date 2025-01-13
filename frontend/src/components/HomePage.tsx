@@ -1,15 +1,12 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Box, Container, VStack, Input, Text, Heading, Card, CardBody } from '@chakra-ui/react'
+import { Box, Container, VStack, Heading, Card, CardBody, Text } from '@chakra-ui/react'
 import { generateProof } from '@/helpers/proof-utils'
-import axios from 'axios'
-import { StepsIndicator } from './StepsIndicator'
+import { ProofStatus } from './ProofStatus'
 import { ProofDisplay } from './ProofDisplay'
 
 export function HomePage() {
-  const [step, setStep] = useState<'initial' | 'jwt' | 'proving' | 'proved' | 'submitting'>('initial')
-  const [jwt, setJwt] = useState('')
   const [proof, setProof] = useState<any>(null)
   const [error, setError] = useState<string | null>(null)
   const [decodedJwt, setDecodedJwt] = useState<{
@@ -36,19 +33,14 @@ export function HomePage() {
         signature: jwt.split('.')[2]
       })
 
-      setStep('jwt')
-      setStep('proving')
-
       // Generate proof with just the JWT
       const result = await generateProof(jwt, null)
       if (result) {
         setProof(result)
-        setStep('proved')
       }
     } catch (err) {
       console.error('Error:', err)
       setError(err instanceof Error ? err.message : 'Failed to process JWT')
-      setStep('initial')
     }
   }
 
@@ -79,16 +71,12 @@ export function HomePage() {
         <Card>
           <CardBody>
             <VStack spacing={6}>
-              {/* Status steps */}
-              <StepsIndicator currentStep={step} />
+              <ProofStatus proof={proof} decodedJwt={decodedJwt} />
               
-              {/* Google Sign-in */}
               <Box id="googleSignInButton" />
               
-              {/* Proof Display */}
-              {proof && <ProofDisplay proof={proof} decodedJwt={decodedJwt} />}
+              {(decodedJwt || proof) && <ProofDisplay proof={proof} decodedJwt={decodedJwt} />}
               
-              {/* Error Display */}
               {error && (
                 <Text color="red.500">{error}</Text>
               )}

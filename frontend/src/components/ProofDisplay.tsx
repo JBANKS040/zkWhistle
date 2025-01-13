@@ -1,34 +1,52 @@
-import { Box, VStack, Text, Code, Heading } from '@chakra-ui/react'
+import { Box, Text, VStack, Heading, Code } from '@chakra-ui/react';
 
 interface ProofDisplayProps {
-  proof: any
+  proof: any;
   decodedJwt: {
-    header: any
-    payload: any
-    signature: string
-  } | null
+    rawJwt: string;
+    header: any;
+    payload: any;
+    signature: string;
+  } | null;
 }
 
 export function ProofDisplay({ proof, decodedJwt }: ProofDisplayProps) {
+  if (!decodedJwt) return null;
+
   return (
-    <VStack spacing={4} width="100%" align="stretch">
-      {decodedJwt && (
-        <Box>
-          <Heading size="md" mb={2}>Decoded JWT</Heading>
-          <Code p={2} borderRadius="md" width="100%">
-            <pre>{JSON.stringify(decodedJwt, null, 2)}</pre>
-          </Code>
-        </Box>
-      )}
-      
+    <VStack spacing={6} align="stretch" w="full">
+      <Box>
+        <Heading size="md" mb={4}>Decoded JWT</Heading>
+        <Code 
+          p={4} 
+          borderRadius="md" 
+          whiteSpace="pre-wrap" 
+          display="block"
+          bg="gray.50"
+        >
+          {JSON.stringify({
+            rawJwt: decodedJwt.rawJwt,
+            header: decodedJwt.header,
+            payload: decodedJwt.payload,
+            signature: decodedJwt.signature
+          }, null, 2)}
+        </Code>
+      </Box>
+
       {proof && (
         <Box>
-          <Heading size="md" mb={2}>Generated Proof</Heading>
-          <Code p={2} borderRadius="md" width="100%">
-            <pre>{JSON.stringify(proof, null, 2)}</pre>
+          <Heading size="md" mb={4}>Generated Proof</Heading>
+          <Code 
+            p={4} 
+            borderRadius="md" 
+            whiteSpace="pre-wrap" 
+            display="block"
+            bg="gray.50"
+          >
+            {JSON.stringify(proof, null, 2)}
           </Code>
         </Box>
       )}
     </VStack>
-  )
+  );
 } 
