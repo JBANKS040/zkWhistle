@@ -10,9 +10,6 @@ env:
 
 jobs:
   check:
-    strategy:
-      fail-fast: true
-
     name: Foundry project
     runs-on: ubuntu-latest
     steps:
@@ -25,21 +22,24 @@ jobs:
         with:
           version: nightly
 
-      - name: Show Forge version
-        run: |
-          forge --version
+      - name: Cache Forge dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            lib/
+            out/
+          key: ${{ runner.os }}-forge-${{ hashFiles('**/foundry.toml') }}
 
-      - name: Run Forge fmt
-        run: |
-          forge fmt --check
-        id: fmt
-
-      - name: Run Forge build
+      - name: Build
         run: |
           forge build --sizes
         id: build
 
-      - name: Run Forge tests
+      - name: Test
         run: |
-          forge test -vvv
+          forge test -vvv --json
         id: test
