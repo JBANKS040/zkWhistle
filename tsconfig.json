@@ -9,7 +9,12 @@
     "declaration": true,
     "skipLibCheck": true,
     "allowJs": true,
-    "resolveJsonModule": true
+    "resolveJsonModule": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"],
+      "@zk-email/*": ["packages/*/src"]
+    }
   },
   "ts-node": {
     "esm": true,
