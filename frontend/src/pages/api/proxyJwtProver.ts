@@ -74,18 +74,69 @@ export default async function handler(
     );
     console.log('Proof generation completed');
     
-    // Log the complete proof data
-    console.log('Generated Proof:', {
+    // Add detailed proof logging
+    console.log('Full Proof Details:');
+    console.log(JSON.stringify({
       proof: {
         pi_a: proof.pi_a,
-        pi_b: proof.pi_b,
+        pi_b: proof.pi_b.map(row => row.map(n => n.toString())), // Convert BigInts to strings
         pi_c: proof.pi_c
       },
       publicSignals: {
         organization_hash: publicSignals[0],
         proof_expiry: publicSignals[1]
       }
-    });
+    }, null, 2));
+
+    // Add this logging right after proof generation
+    console.log('Solidity Calldata Format:');
+    console.log([
+        // pA
+        proof.pi_a[0].toString(),
+        proof.pi_a[1].toString(),
+        // pB (needs to be flattened)
+        proof.pi_b[0][0].toString(),
+        proof.pi_b[0][1].toString(),
+        proof.pi_b[1][0].toString(),
+        proof.pi_b[1][1].toString(),
+        // pC
+        proof.pi_c[0].toString(),
+        proof.pi_c[1].toString(),
+        // public inputs
+        publicSignals[0].toString(),
+        publicSignals[1].toString()
+    ]);
+
+    // After proof generation, before the return statement
+    console.log('Proof for Solidity Test:');
+    console.log(`
+    // pA
+    uint256[2] memory pA = [
+        ${proof.pi_a[0]},
+        ${proof.pi_a[1]}
+    ];
+    
+    uint256[2][2] memory pB = [
+        [
+            ${proof.pi_b[0][0]},
+            ${proof.pi_b[0][1]}
+        ],
+        [
+            ${proof.pi_b[1][0]},
+            ${proof.pi_b[1][1]}
+        ]
+    ];
+    
+    uint256[2] memory pC = [
+        ${proof.pi_c[0]},
+        ${proof.pi_c[1]}
+    ];
+
+    uint256[2] memory pubSignals = [
+        ${publicSignals[0]},  // organization_hash
+        ${publicSignals[1]}   // proof_expiry
+    ];
+    `);
 
     return res.status(200).json({
       proof: {

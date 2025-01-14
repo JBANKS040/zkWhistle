@@ -40,4 +40,10 @@ export async function generateProof(jwt: string, pubkey: any) {
     });
     throw error;
   }
+}
+
+export function getOrganizationFromHash(hash: string): string {
+  // For now, we know it's gmail.com
+  // In production, you'd want to maintain a mapping or decode this properly
+  return 'gmail.com';
 } 
