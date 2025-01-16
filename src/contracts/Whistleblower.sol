@@ -8,22 +8,34 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 contract Whistleblower is ReentrancyGuard, Ownable {
     Groth16Verifier public immutable verifier;
     
+    // Constants
+    uint256 constant VERIFICATION_WINDOW = 1 weeks;
+    uint256 constant PROOF_TIME_BUFFER = 1 hours;
+    
+    // Maps: organization hash => array of reports
     mapping(uint256 => Report[]) public reports;
     
+    // Maps: reporter address => organization hash => expiry timestamp
+    mapping(address => mapping(uint256 => uint256)) public verifiedReporters;
+    
     struct Report {
-        bytes32 reportHash;
-        uint256 timestamp;
-        bytes encryptedData;
-        string title;
-        string content;
-        string ipfsHash;
+        bytes32 reportHash;        // Hash of the report content
+        uint256 timestamp;         // When the report was submitted
+        string title;             // Report title
+        string content;           // Report content
+        address submitter;        // Address that submitted the report
     }
     
+    event ReporterVerified(
+        address indexed reporter,
+        uint256 indexed organizationHash
+    );
+
     event ReportSubmitted(
         uint256 indexed organizationHash,
         bytes32 reportHash,
         uint256 timestamp,
-        string ipfsHash
+        address indexed submitter
     );
     
     bool public testMode;
@@ -36,13 +48,12 @@ contract Whistleblower is ReentrancyGuard, Ownable {
         testMode = _enabled;
     }
     
-    function submitReport(
+    function verifyProofAndRegister(
         uint256[2] memory pA,
         uint256[2][2] memory pB,
         uint256[2] memory pC,
-        uint256[2] memory pubSignals,
-        bytes memory encryptedData
-    ) public {
+        uint256[2] memory pubSignals  // [organizationHash, timestamp]
+    ) public nonReentrant returns (bool) {
         require(
             verifier.verifyProof(pA, pB, pC, pubSignals),
             "Invalid proof"
@@ -50,71 +61,47 @@ contract Whistleblower is ReentrancyGuard, Ownable {
         
         if (!testMode) {
             require(
-                pubSignals[1] >= block.timestamp - 1 hours && 
-                pubSignals[1] <= block.timestamp + 1 hours,
-                "Proof expired or invalid timestamp"
+                pubSignals[1] >= block.timestamp - PROOF_TIME_BUFFER && 
+                pubSignals[1] <= block.timestamp + PROOF_TIME_BUFFER,
+                "Proof expired"
             );
         }
         
-        reports[pubSignals[0]].push(Report({
-            reportHash: keccak256(encryptedData),
-            timestamp: block.timestamp,
-            encryptedData: encryptedData,
-            title: "",
-            content: "",
-            ipfsHash: ""
-        }));
-        
-        emit ReportSubmitted(pubSignals[0], reports[pubSignals[0]][reports[pubSignals[0]].length - 1].reportHash, block.timestamp, "");
+        verifiedReporters[msg.sender][pubSignals[0]] = block.timestamp + VERIFICATION_WINDOW;
+        emit ReporterVerified(msg.sender, pubSignals[0]);
+        return true;
     }
     
-    function submitReportWithIPFS(
-        uint[2] calldata _pA,
-        uint[2][2] calldata _pB,
-        uint[2] calldata _pC,
-        uint[2] calldata _pubSignals,
-        bytes calldata _encryptedData,
-        string calldata _title,
-        string calldata _content,
-        string calldata _ipfsHash
-    ) external nonReentrant {
+    function submitReport(
+        uint256 organizationHash,
+        string calldata title,
+        string calldata content
+    ) public nonReentrant {
         require(
-            verifier.verifyProof(_pA, _pB, _pC, _pubSignals),
-            "Invalid proof"
+            verifiedReporters[msg.sender][organizationHash] > block.timestamp,
+            "Proof expired or not verified"
         );
         
-        uint256 organizationHash = _pubSignals[0];
-        uint256 expTimestamp = _pubSignals[1];
-        
-        if (!testMode) {
-            require(
-                expTimestamp >= block.timestamp - 1 hours && 
-                expTimestamp <= block.timestamp + 1 hours,
-                "Proof expired or invalid timestamp"
-            );
-        }
-        
-        bytes32 reportHash = keccak256(_encryptedData);
+        bytes32 reportHash = keccak256(abi.encodePacked(title, content));
         
         reports[organizationHash].push(Report({
             reportHash: reportHash,
             timestamp: block.timestamp,
-            encryptedData: _encryptedData,
-            title: _title,
-            content: _content,
-            ipfsHash: _ipfsHash
+            title: title,
+            content: content,
+            submitter: msg.sender
         }));
         
         emit ReportSubmitted(
             organizationHash,
             reportHash,
             block.timestamp,
-            _ipfsHash
+            msg.sender
         );
     }
     
     function getReports(uint256 organizationHash) 
-        external 
+        public 
         view 
         returns (Report[] memory) 
     {
@@ -122,7 +109,7 @@ contract Whistleblower is ReentrancyGuard, Ownable {
     }
     
     function getReportCount(uint256 organizationHash) 
-        external 
+        public 
         view 
         returns (uint256) 
     {
