@@ -5,7 +5,7 @@ include "circomlib/circuits/comparators.circom";
 include "circomlib/circuits/mux1.circom";
 
 template ExtractDomain(maxLength, emailLength) {
-    signal input email[1026];        // Match JWT verifier's decoded length
+    signal input email[1026];        
     signal input domainIndex;       
     signal input domainLength;      
     signal output domain_hash;      
@@ -14,7 +14,7 @@ template ExtractDomain(maxLength, emailLength) {
     signal domain[maxLength];
     component selectors[maxLength];
     
-    // For each possible position, use a multiplexer to select the right character
+    // Extract domain characters
     for (var i = 0; i < maxLength; i++) {
         selectors[i] = Mux1();
         selectors[i].c[0] <== 0;
@@ -23,21 +23,27 @@ template ExtractDomain(maxLength, emailLength) {
         domain[i] <== selectors[i].out;
     }
     
-    // Use smaller chunks for Poseidon (it supports up to 6 inputs)
-    var numChunks = (maxLength + 5) \ 6;
+    // Hash in chunks of 15 (max input size for Poseidon)
+    var numChunks = (maxLength + 14) \ 15; // Integer division rounding up
     component hashers[numChunks];
-    component finalHasher = Poseidon(numChunks);
+    signal intermediateHashes[numChunks];
     
     for (var i = 0; i < numChunks; i++) {
-        hashers[i] = Poseidon(6);
-        for (var j = 0; j < 6; j++) {
-            if (i * 6 + j < maxLength) {
-                hashers[i].inputs[j] <== domain[i * 6 + j];
+        hashers[i] = Poseidon(15);
+        for (var j = 0; j < 15; j++) {
+            if (i * 15 + j < maxLength) {
+                hashers[i].inputs[j] <== domain[i * 15 + j];
             } else {
                 hashers[i].inputs[j] <== 0;
             }
         }
-        finalHasher.inputs[i] <== hashers[i].out;
+        intermediateHashes[i] <== hashers[i].out;
+    }
+    
+    // Final hash of all intermediate hashes
+    component finalHasher = Poseidon(numChunks);
+    for (var i = 0; i < numChunks; i++) {
+        finalHasher.inputs[i] <== intermediateHashes[i];
     }
     
     domain_hash <== finalHasher.out;

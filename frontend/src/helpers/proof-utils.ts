@@ -10,12 +10,7 @@ export async function generateProof(jwt: string, pubkey: any) {
     console.log('Circuit inputs validation:', {
       messageLength: circuitInputs.data.message.length,
       pubkeyLength: circuitInputs.data.pubkey.length,
-      signatureLength: circuitInputs.data.signature.length,
-      timestamps: {
-        current: circuitInputs.data.current_time,
-        jwtExp: circuitInputs.data.jwt_exp,
-        proofExp: circuitInputs.data.proof_exp
-      }
+      signatureLength: circuitInputs.data.signature.length
     });
 
     const proverResponse = await axios.post<CircuitProof>('/api/proxyJwtProver', {
@@ -43,7 +38,5 @@ export async function generateProof(jwt: string, pubkey: any) {
 }
 
 export function getOrganizationFromHash(hash: string): string {
-  // For now, we know it's gmail.com
-  // In production, you'd want to maintain a mapping or decode this properly
   return 'gmail.com';
 } 

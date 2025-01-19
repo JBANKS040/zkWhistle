@@ -1,7 +1,6 @@
 import { RSAPublicKey } from './types';
 import { MAX_MESSAGE_LENGTH, RSA_N_BITS, RSA_K_CHUNKS } from './constants';
 import { extractEmailDomain } from './email-utils';
-import { getTimeAndExpiry } from './time-utils';
 import { sha256Pad } from '@zk-email/helpers';
 
 function rsaToCircomFormat(base64Str: string, numChunks: number): bigint[] {
@@ -41,9 +40,6 @@ export async function generateEmailJWTInputs(
   const message = Buffer.from(`${headerB64}.${payloadB64}`);
   const [messagePadded, messagePaddedLen] = sha256Pad(message, MAX_MESSAGE_LENGTH);
 
-  // Get time calculations
-  const { current_time, jwt_exp, proof_exp } = getTimeAndExpiry();
-
   // Convert signature to bigint array
   const signature = Buffer.from(signatureB64, 'base64');
   const signatureBigInts = rsaToCircomFormat(signatureB64, RSA_K_CHUNKS);
@@ -58,9 +54,6 @@ export async function generateEmailJWTInputs(
     pubkey: pubkeyBigInts,
     signature: signatureBigInts,
     periodIndex: jwt.indexOf('.'),
-    jwt_exp: Number(jwt_exp),
-    proof_exp: Number(proof_exp),
-    current_time: Number(current_time),
     emailDomainIndex: Number(domainIndex),
     emailDomainLength: Number(domainLength),
     jwt // Include original JWT for verification

@@ -1,7 +1,11 @@
 import type { Metadata } from 'next'
+import { ChakraProvider } from '@chakra-ui/react'
+import { GoogleOAuthProvider } from '@react-oauth/google'
 import localFont from 'next/font/local'
 import './globals.css'
-import { Providers } from '@/context'
+import { CSPostHogProvider } from './providers'
+import PostHogPageView from "./PostHogPageView"
+import { GOOGLE_CONFIG } from '@/config/google'
 
 // Load custom fonts
 const geistSans = localFont({
@@ -17,8 +21,8 @@ const geistMono = localFont({
 })
 
 export const metadata: Metadata = {
-  title: 'ZK Whistleblower',
-  description: 'Anonymous whistleblowing platform using ZK proofs',
+  title: 'JWT-Wallet',
+  description: 'A simple JWT wallet application',
 }
 
 export default function RootLayout({
@@ -29,8 +33,12 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${geistSans.variable} ${geistMono.variable}`}>
-        <Providers>{children}</Providers>
-        <script src="https://accounts.google.com/gsi/client" async defer></script>
+        <CSPostHogProvider>
+          <PostHogPageView />
+          <GoogleOAuthProvider clientId={GOOGLE_CONFIG.clientId}>
+            <ChakraProvider>{children}</ChakraProvider>
+          </GoogleOAuthProvider>
+        </CSPostHogProvider>
       </body>
     </html>
   )

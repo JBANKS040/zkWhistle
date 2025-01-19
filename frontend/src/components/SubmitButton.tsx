@@ -1,22 +1,44 @@
+'use client'
+
+import { Button, useToast } from '@chakra-ui/react';
+
 interface SubmitButtonProps {
-  onClick: () => void
-  isLoading?: boolean
+  proof: any;
+  publicSignals: any;
+  isLoading: boolean;
+  onClick: (proof: any) => Promise<void>;
 }
 
-export function SubmitButton({ onClick, isLoading }: SubmitButtonProps) {
+export function SubmitButton({ 
+  proof, 
+  publicSignals, 
+  isLoading,
+  onClick 
+}: SubmitButtonProps) {
+  const toast = useToast();
+
+  const handleClick = async () => {
+    try {
+      await onClick({ proof, publicSignals });
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to submit proof',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
+    }
+  };
+
   return (
-    <button
-      onClick={onClick}
-      disabled={isLoading}
-      className={`
-        px-4 py-2 rounded-lg
-        ${isLoading 
-          ? 'bg-gray-400 cursor-not-allowed' 
-          : 'bg-blue-500 hover:bg-blue-600'}
-        text-white font-medium
-      `}
+    <Button
+      colorScheme="blue"
+      onClick={handleClick}
+      isLoading={isLoading}
+      loadingText="Submitting..."
     >
-      {isLoading ? 'Submitting...' : 'Submit Proof'}
-    </button>
-  )
+      Submit Proof
+    </Button>
+  );
 } 

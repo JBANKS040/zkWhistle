@@ -99,15 +99,6 @@ Allow verified users to submit whistleblowing reports with confidentiality.
 
 ---
 
-## 3. Proof Expiration
-### **Objective**:
-Ensure that verification of proofs is only for a limited time based on the JWT's `exp` claim.
-
-### **Steps**:
-1. **Validate Expiry Time**:
-   - During on-chain proof verification, the system checks the JWT's `exp` claim to ensure the proof is still valid.
-   - Expired JWTs are rejected automatically.
-
 
 
 ---

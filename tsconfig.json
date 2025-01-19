@@ -14,12 +14,17 @@
     "paths": {
       "@/*": ["./src/*"],
       "@zk-email/*": ["packages/*/src"]
-    }
+    },
+    "typeRoots": ["./node_modules/@types", "./src/types"]
   },
   "ts-node": {
     "esm": true,
     "experimentalSpecifiers": true
   },
-  "include": ["script/**/*", "test/**/*"],
+  "include": [
+    "script/**/*",
+    "test/**/*",
+    "frontend/src/**/*"
+  ],
   "exclude": ["node_modules"]
 }
