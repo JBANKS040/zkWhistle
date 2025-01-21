@@ -3,55 +3,36 @@ import { groth16 } from 'snarkjs';
 import path from 'path';
 
 const CIRCUIT_FILES = {
-  wasm: './public/circuits/EmailJWT.wasm',
-  zkey: './public/circuits/EmailJWT_final.zkey'
+  wasm: path.join(process.cwd(), 'public/circuits/EmailJWT.wasm'),
+  zkey: path.join(process.cwd(), 'public/circuits/EmailJWT_final.zkey')
 };
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
-    res.setHeader('Allow', ['POST']);
-    return res.status(405).end(`Method ${req.method} Not Allowed`);
+    return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
   }
 
   try {
-    console.log('🔄 Starting proof generation...');
+    console.log('Backend: Starting proof generation...');
     const { input } = req.body;
+    
     if (!input) {
-      console.error('❌ Missing input');
       return res.status(400).json({ error: 'Missing input' });
     }
 
-    console.log('📊 Input validation:', {
-      messageLength: input.message.length,
-      pubkeyLength: input.pubkey.length,
-      signatureLength: input.signature.length,
-      periodIndex: input.periodIndex,
-      emailDomainIndex: input.emailDomainIndex,
-      emailDomainLength: input.emailDomainLength
+    console.log('Backend: Input received:', {
+      messageLength: input.message?.length,
+      pubkeyLength: input.pubkey?.length,
+      signatureLength: input.signature?.length
     });
 
-    // Remove jwt from circuit inputs
-    const { jwt, ...circuitInputs } = input;
-
-    console.log('🔄 Generating proof with snarkjs...');
-    console.log('📁 Using circuit files:', CIRCUIT_FILES);
-
     const { proof, publicSignals } = await groth16.fullProve(
-      circuitInputs,
+      input,
       CIRCUIT_FILES.wasm,
       CIRCUIT_FILES.zkey
     );
 
-    console.log('✅ Proof generated successfully:', {
-      proof: {
-        pi_a: proof.pi_a.slice(0, 2) + '...',
-        pi_b: proof.pi_b.slice(0, 2) + '...',
-        pi_c: proof.pi_c.slice(0, 2) + '...'
-      },
-      publicSignals: {
-        organization_hash: publicSignals[0]
-      }
-    });
+    console.log('Backend: Proof generated successfully');
 
     return res.status(200).json({
       proof,
@@ -61,15 +42,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     });
 
   } catch (error: any) {
-    console.error('❌ Proof generation error:', {
-      message: error.message,
-      stack: error.stack,
-      details: error.details || 'No additional details'
-    });
-    return res.status(500).json({
-      error: 'Proof generation failed',
-      details: error.message,
-      stack: error.stack
+    console.error('Backend error:', error);
+    return res.status(500).json({ 
+      error: error.message,
+      stack: error.stack 
     });
   }
 } 

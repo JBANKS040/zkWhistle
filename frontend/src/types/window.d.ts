@@ -1,8 +1,8 @@
-import { type EIP1193Provider } from 'viem';
+import { type EthereumProvider } from 'viem';
 
 declare global {
   interface Window {
-    ethereum?: EIP1193Provider;
+    ethereum?: EthereumProvider;
   }
 }
 

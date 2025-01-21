@@ -3,12 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "generate-input": "tsx script/generate-input.ts",
-    "compile": "circom circuits/EmailJWT.circom --r1cs --wasm --sym",
-    "install:circuits": "cd circuits && yarn install",
-    "dev": "cd frontend && npm run dev",
-    "build": "cd frontend && npm run build",
-    "start": "cd frontend && npm run start"
+    "build": "waffle"
   },
   "dependencies": {
     "@chakra-ui/icons": "^2.2.4",
@@ -27,6 +22,7 @@
     "@zk-email/relayer-utils": "^0.1.0",
     "circomlib": "^2.0.5",
     "circomlibjs": "^0.1.7",
+    "ethers": "^6.13.5",
     "node-rsa": "^1.1.1",
     "posthog-js": "^1.207.0",
     "snarkjs": "^0.7.0",
@@ -36,6 +32,7 @@
   "devDependencies": {
     "@types/node": "^20.10.5",
     "@types/node-rsa": "^1.1.4",
+    "ethereum-waffle": "^4.0.10",
     "ts-node": "^10.9.2",
     "tsx": "^4.7.0",
     "typescript": "^5.3.3"

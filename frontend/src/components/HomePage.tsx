@@ -33,13 +33,15 @@ export function HomePage() {
         signature: jwt.split('.')[2]
       })
 
-      // Generate proof with just the JWT
-      const result = await generateProof(jwt, null)
+      // Remove the null argument
+      const result = await generateProof(jwt)
+      console.log('Proof generation started')
       if (result) {
         setProof(result)
+        console.log('Proof set successfully:', result)
       }
     } catch (err) {
-      console.error('Error:', err)
+      console.error('Error in handleCredentialResponse:', err)
       setError(err instanceof Error ? err.message : 'Failed to process JWT')
     }
   }

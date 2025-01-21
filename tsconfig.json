@@ -1,30 +1,24 @@
 {
   "compilerOptions": {
-    "target": "es2020",
-    "module": "ES2020",
+    "target": "ES2020",
+    "module": "CommonJS",
     "moduleResolution": "node",
     "esModuleInterop": true,
-    "strict": true,
-    "outDir": "dist",
-    "declaration": true,
-    "skipLibCheck": true,
     "allowJs": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "forceConsistentCasingInFileNames": true,
+    "noEmit": true,
+    "incremental": true,
     "resolveJsonModule": true,
-    "baseUrl": ".",
-    "paths": {
-      "@/*": ["./src/*"],
-      "@zk-email/*": ["packages/*/src"]
-    },
-    "typeRoots": ["./node_modules/@types", "./src/types"]
+    "isolatedModules": true,
+    "jsx": "preserve"
   },
   "ts-node": {
-    "esm": true,
-    "experimentalSpecifiers": true
+    "compilerOptions": {
+      "module": "CommonJS"
+    }
   },
-  "include": [
-    "script/**/*",
-    "test/**/*",
-    "frontend/src/**/*"
-  ],
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx"],
   "exclude": ["node_modules"]
 }

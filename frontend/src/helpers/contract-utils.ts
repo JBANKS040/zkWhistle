@@ -1,6 +1,9 @@
 import { createPublicClient, createWalletClient, custom, http, type EIP1193Provider } from 'viem';
 import { baseSepolia } from 'viem/chains';
 import { VERIFIER_CONTRACT } from '@/config/contracts';
+import { ProofData, PublicSignals } from '@/types/circuit';
+
+export { VERIFIER_CONTRACT };
 
 // Define Base Sepolia chain configuration
 export const baseSepoliaChain = {
@@ -13,8 +16,8 @@ export const baseSepoliaChain = {
 
 // Public client for reading from the blockchain
 export const publicClient = createPublicClient({
-  chain: baseSepoliaChain,
-  transport: http('https://sepolia.base.org')
+  chain: baseSepolia,
+  transport: http()
 });
 
 // Function to get wallet client
@@ -31,52 +34,53 @@ export const getWalletClient = () => {
 };
 
 // Function to verify proof using connected wallet
-export async function verifyProofWithWallet(proof: any, publicSignals: any) {
-  const walletClient = getWalletClient();
+export async function verifyProofWithWallet(
+  proof: ProofData, 
+  publicSignals: PublicSignals
+) {
+  const walletClient = await getWalletClient();
   if (!walletClient) throw new Error('Wallet not connected');
 
   const [address] = await walletClient.getAddresses();
-
-  // Format proof exactly as in the working version
+  
+  // Format proof for contract - ensure arrays are exactly the right length
   const formattedProof = {
-    pA: proof.pi_a.slice(0, 2).map((x: string) => BigInt(x)),
+    pA: proof.pi_a.slice(0, 2).map(x => BigInt(x)) as [bigint, bigint],
     pB: [
       [BigInt(proof.pi_b[0][1]), BigInt(proof.pi_b[0][0])],
       [BigInt(proof.pi_b[1][1]), BigInt(proof.pi_b[1][0])]
-    ],
-    pC: proof.pi_c.slice(0, 2).map((x: string) => BigInt(x)),
-    pubSignals: [BigInt(publicSignals.organization_hash)]
+    ] as [[bigint, bigint], [bigint, bigint]],
+    pC: proof.pi_c.slice(0, 2).map(x => BigInt(x)) as [bigint, bigint],
+    pubSignals: [BigInt(publicSignals.organization_hash)] as [bigint]
   };
 
-  console.log('Formatted proof:', {
-    pA: formattedProof.pA.map((n: bigint) => n.toString()),
-    pB: formattedProof.pB.map((row: bigint[]) => row.map((n: bigint) => n.toString())),
-    pC: formattedProof.pC.map((n: bigint) => n.toString()),
-    pubSignals: formattedProof.pubSignals.map((n: bigint) => n.toString())
+  const { request } = await publicClient.simulateContract({
+    ...VERIFIER_CONTRACT,
+    functionName: 'verifyProof',
+    args: [
+      formattedProof.pA,
+      formattedProof.pB, 
+      formattedProof.pC,
+      formattedProof.pubSignals
+    ] as const,
+    account: address
   });
 
-  try {
-    const hash = await walletClient.writeContract({
-      ...VERIFIER_CONTRACT,
-      functionName: 'verifyProofAndStore',
-      args: [
-        formattedProof.pA,
-        formattedProof.pB,
-        formattedProof.pC,
-        formattedProof.pubSignals
-      ],
-      account: address,
-    });
-
-    console.log('Transaction sent:', hash);
-    return hash;
-  } catch (error) {
-    console.error('Contract call failed:', error);
-    throw error;
-  }
+  const hash = await walletClient.writeContract(request);
+  return hash;
 }
 
-// Add this function to contract-utils.ts
+// Function to get verified organization for an address
+export async function getVerifiedOrganization(address: string) {
+  const data = await publicClient.readContract({
+    ...VERIFIER_CONTRACT,
+    functionName: 'getVerifiedOrganization',
+    args: [address as `0x${string}`]
+  });
+  return data;
+}
+
+// Function to get gas price
 export async function getGasPrice() {
   const gasPrice = await publicClient.getGasPrice();
   console.log('Current gas price:', gasPrice);

@@ -4,8 +4,7 @@ import { getGooglePublicKey } from '@/helpers/rsa-utils';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
-    res.setHeader('Allow', ['POST']);
-    return res.status(405).end(`Method ${req.method} Not Allowed`);
+    return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
   }
 
   try {
@@ -14,25 +13,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: 'Missing JWT' });
     }
 
-    console.log('🔑 Fetching Google public key...');
+    console.log('Backend: Generating circuit inputs for JWT:', jwt.slice(0, 20) + '...');
+    
     const [header] = jwt.split('.');
     const { kid } = JSON.parse(Buffer.from(header, 'base64').toString());
     const publicKey = await getGooglePublicKey(kid);
-    console.log('✅ Public key fetched:', { kid, n: publicKey.n.slice(0, 20) + '...' });
 
-    console.log('🔄 Generating circuit inputs...');
     const circuitInputs = await generateEmailJWTInputs(jwt, publicKey);
-    console.log('📊 Raw circuit inputs:', {
+    
+    console.log('Backend: Circuit inputs generated successfully:', {
       messageLength: circuitInputs.message.length,
       pubkeyLength: circuitInputs.pubkey.length,
-      signatureLength: circuitInputs.signature.length,
-      periodIndex: circuitInputs.periodIndex,
-      emailDomainIndex: circuitInputs.emailDomainIndex,
-      emailDomainLength: circuitInputs.emailDomainLength
+      signatureLength: circuitInputs.signature.length
     });
 
-    // Convert BigInts to strings for JSON serialization
-    const serializedInputs = {
+    return res.status(200).json({
       message: circuitInputs.message.map(n => n.toString()),
       messageLength: circuitInputs.messageLength,
       pubkey: circuitInputs.pubkey.map(n => n.toString()),
@@ -40,17 +35,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       periodIndex: circuitInputs.periodIndex,
       emailDomainIndex: circuitInputs.emailDomainIndex,
       emailDomainLength: circuitInputs.emailDomainLength
-    };
-
-    console.log('✅ Circuit inputs generated successfully');
-    return res.status(200).json(serializedInputs);
+    });
 
   } catch (error: any) {
-    console.error('❌ Error generating inputs:', {
-      message: error.message,
-      stack: error.stack
+    console.error('Backend error:', error);
+    return res.status(500).json({ 
+      error: error.message,
+      stack: error.stack 
     });
-    return res.status(500).json({ error: String(error) });
   }
 } 
 
