@@ -6,6 +6,7 @@ import "../src/contracts/JwtVerifier.sol";
 
 contract JwtVerifierTest is Test {
     JwtVerifier public jwtVerifier;
+    string constant TEST_ORG_NAME = "test.org";
     
     // Your actual proof data - formatted for the verifier contract
     uint256[2] validProofA = [
@@ -61,7 +62,8 @@ contract JwtVerifierTest is Test {
             validProofA,
             validProofB,
             validProofC,
-            validPubSignals
+            validPubSignals,
+            TEST_ORG_NAME
         );
         assertTrue(success, "Proof verification failed");
     }
@@ -72,7 +74,8 @@ contract JwtVerifierTest is Test {
             validProofA,
             validProofB,
             validProofC,
-            validPubSignals
+            validPubSignals,
+            TEST_ORG_NAME
         );
         assertTrue(success, "First verification failed");
 
@@ -82,7 +85,8 @@ contract JwtVerifierTest is Test {
             validProofA,
             validProofB,
             validProofC,
-            validPubSignals
+            validPubSignals,
+            TEST_ORG_NAME
         );
     }
 
@@ -92,7 +96,8 @@ contract JwtVerifierTest is Test {
             validProofA,
             validProofB,
             validProofC,
-            validPubSignals
+            validPubSignals,
+            TEST_ORG_NAME
         );
 
         // Check organization hash is stored correctly
@@ -109,7 +114,8 @@ contract JwtVerifierTest is Test {
             validProofA,
             validProofB,
             validProofC,
-            validPubSignals
+            validPubSignals,
+            TEST_ORG_NAME
         );
 
         // Check organization hash is stored correctly for Alice
@@ -135,10 +141,49 @@ contract JwtVerifierTest is Test {
             validProofA,
             validProofB,
             validProofC,
-            validPubSignals
+            validPubSignals,
+            TEST_ORG_NAME
         );
 
         // Check proof is marked as verified
         assertTrue(jwtVerifier.verifiedProofs(proofHash), "Proof should be marked as verified");
+    }
+
+    function testOrganizationName() public {
+        // Verify proof first with test org name
+        jwtVerifier.verifyProof(
+            validProofA,
+            validProofB,
+            validProofC,
+            validPubSignals,
+            TEST_ORG_NAME
+        );
+
+        // Check organization name is set correctly
+        string memory orgName = jwtVerifier.getOrganizationName(validPubSignals[0]);
+        assertEq(orgName, TEST_ORG_NAME, "Organization name mismatch");
+    }
+
+    function testUnknownOrganizationName() public view {
+        // Check unknown organization returns default name
+        string memory orgName = jwtVerifier.getOrganizationName(12345);
+        assertEq(orgName, "Unknown Organization", "Unknown organization should return default name");
+    }
+
+    function testOrganizationNameAfterVerification() public {
+        // Verify proof as different address with test org name
+        address alice = address(0x1);
+        vm.prank(alice);
+        jwtVerifier.verifyProof(
+            validProofA,
+            validProofB,
+            validProofC,
+            validPubSignals,
+            TEST_ORG_NAME
+        );
+
+        // Check organization name is accessible to anyone
+        string memory orgName = jwtVerifier.getOrganizationName(validPubSignals[0]);
+        assertEq(orgName, TEST_ORG_NAME, "Organization name should be public");
     }
 } 

@@ -6,7 +6,10 @@ import "../src/contracts/JwtVerifier.sol";
 
 contract DeployJwtVerifier is Script {
     function run() public {
-        uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
+        string memory rawKey = vm.envString("PRIVATE_KEY");
+        bytes memory key = vm.parseBytes(rawKey);
+        uint256 deployerPrivateKey = uint256(bytes32(key));
+
         vm.startBroadcast(deployerPrivateKey);
 
         JwtVerifier verifier = new JwtVerifier();
