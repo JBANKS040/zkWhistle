@@ -22,7 +22,7 @@ interface ProofStatusProps {
     payload: any;
     signature: string;
   } | null;
-  onVerificationSuccess?: () => void;
+  onVerificationSuccess?: (hash: string) => void;
   publicSignals: any;
 }
 
@@ -118,7 +118,7 @@ export function ProofStatus({ proof, decodedJwt, onVerificationSuccess, publicSi
         isClosable: true,
       });
 
-      onVerificationSuccess?.();
+      onVerificationSuccess?.(hash);
     } catch (error) {
       console.error('Error submitting proof:', error);
       toast({

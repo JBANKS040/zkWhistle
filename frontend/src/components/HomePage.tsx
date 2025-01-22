@@ -73,7 +73,11 @@ export function HomePage() {
         <Card>
           <CardBody>
             <VStack spacing={6}>
-              <ProofStatus proof={proof} decodedJwt={decodedJwt} />
+              <ProofStatus 
+                proof={proof} 
+                decodedJwt={decodedJwt} 
+                publicSignals={proof?.publicSignals}
+              />
               
               <Box id="googleSignInButton" />
               

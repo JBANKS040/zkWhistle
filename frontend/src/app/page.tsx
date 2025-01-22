@@ -64,6 +64,7 @@ export default function Page() {
             <MainTabs 
               proof={proof} 
               decodedJwt={decodedJwt} 
+              publicSignals={proof?.publicSignals}
               onJWTReceived={handleJWTReceived}
             />
           </Box>
