@@ -1,5 +1,4 @@
 import axios from 'axios'
-import { EmailJWTCircuitInputs, CircuitProof } from '@/types/circuit';
 
 export async function generateProof(jwt: string) {
   try {
