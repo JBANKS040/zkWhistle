@@ -1,4 +1,6 @@
-export const VERIFIER_ADDRESS = process.env.NEXT_PUBLIC_VERIFIER_ADDRESS as `0x${string}`;
+// Hardcode the deployed contract addresses
+export const VERIFIER_ADDRESS = '0x50C6D766C7313928D0a37929f2efFdA28B0cdA85';
+export const REPORT_ADDRESS = '0x0967Feef718cFF36099c633BaF6644e3B3f1a4F9';
 
 export const VERIFIER_CONTRACT = {
   address: VERIFIER_ADDRESS,
@@ -8,7 +10,8 @@ export const VERIFIER_CONTRACT = {
         {"internalType": "uint256[2]", "name": "_pA", "type": "uint256[2]"},
         {"internalType": "uint256[2][2]", "name": "_pB", "type": "uint256[2][2]"},
         {"internalType": "uint256[2]", "name": "_pC", "type": "uint256[2]"},
-        {"internalType": "uint256[1]", "name": "_pubSignals", "type": "uint256[1]"}
+        {"internalType": "uint256[1]", "name": "_pubSignals", "type": "uint256[1]"},
+        {"internalType": "string", "name": "_organizationName", "type": "string"}
       ],
       "name": "verifyProof",
       "outputs": [{"internalType": "bool", "name": "", "type": "bool"}],
@@ -26,6 +29,87 @@ export const VERIFIER_CONTRACT = {
       "inputs": [{"internalType": "uint256", "name": "organizationHash", "type": "uint256"}],
       "name": "isOrganizationVerified",
       "outputs": [{"internalType": "bool", "name": "", "type": "bool"}],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [{"internalType": "uint256", "name": "organizationHash", "type": "uint256"}],
+      "name": "getOrganizationName",
+      "outputs": [{"internalType": "string", "name": "", "type": "string"}],
+      "stateMutability": "view",
+      "type": "function"
+    }
+  ]
+} as const;
+
+export const REPORT_CONTRACT = {
+  address: REPORT_ADDRESS,
+  abi: [
+    {
+      "inputs": [{"internalType": "address", "name": "_verifier", "type": "address"}],
+      "stateMutability": "nonpayable",
+      "type": "constructor"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {"indexed": true, "internalType": "uint256", "name": "reportId", "type": "uint256"},
+        {"indexed": true, "internalType": "uint256", "name": "organizationHash", "type": "uint256"},
+        {"indexed": false, "internalType": "uint256", "name": "timestamp", "type": "uint256"}
+      ],
+      "name": "ReportSubmitted",
+      "type": "event"
+    },
+    {
+      "inputs": [
+        {"internalType": "string", "name": "_title", "type": "string"},
+        {"internalType": "string", "name": "_content", "type": "string"}
+      ],
+      "name": "submitReport",
+      "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [{"internalType": "uint256", "name": "_reportId", "type": "uint256"}],
+      "name": "getReport",
+      "outputs": [{
+        "components": [
+          {"internalType": "string", "name": "title", "type": "string"},
+          {"internalType": "string", "name": "content", "type": "string"},
+          {"internalType": "uint256", "name": "timestamp", "type": "uint256"},
+          {"internalType": "uint256", "name": "organizationHash", "type": "uint256"}
+        ],
+        "internalType": "struct WhistleblowReport.Report",
+        "name": "",
+        "type": "tuple"
+      }],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "reportCount",
+      "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
+      "name": "reports",
+      "outputs": [
+        {"internalType": "string", "name": "title", "type": "string"},
+        {"internalType": "string", "name": "content", "type": "string"},
+        {"internalType": "uint256", "name": "timestamp", "type": "uint256"},
+        {"internalType": "uint256", "name": "organizationHash", "type": "uint256"}
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "verifier",
+      "outputs": [{"internalType": "contract JwtVerifier", "name": "", "type": "address"}],
       "stateMutability": "view",
       "type": "function"
     }

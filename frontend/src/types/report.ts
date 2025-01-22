@@ -1,10 +1,8 @@
-export interface Report {
+export type Report = {
   title: string;
   content: string;
-  timestamp: number;
-  whistleblower: string;
+  timestamp: bigint;
   organizationHash: bigint;
-  organizationName: string;
 }
 
 export interface ReportSubmission {

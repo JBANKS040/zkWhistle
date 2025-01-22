@@ -21,8 +21,9 @@ export interface ProofData {
   curve: string;
 }
 
-export interface PublicSignals {
+export type PublicSignals = {
   organization_hash: string;
+  organization_name: string;
 }
 
 export interface CircuitProof {

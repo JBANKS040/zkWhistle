@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Circle, HStack, Text, VStack, Button, Spinner, Box, Accordion, AccordionItem, AccordionButton, AccordionPanel, AccordionIcon, Link, Code, useToast } from '@chakra-ui/react';
 import { CheckIcon, ExternalLinkIcon } from '@chakra-ui/icons';
-import { verifyProofWithWallet } from '@/helpers/contract-utils';
+import { verifyProofWithWallet, getOrganizationName } from '@/helpers/contract-utils';
 
 type Status = 'pending' | 'success' | 'loading';
 
@@ -23,6 +23,7 @@ interface ProofStatusProps {
     signature: string;
   } | null;
   onVerificationSuccess?: () => void;
+  publicSignals: any;
 }
 
 function Step({ label, status }: { label: string; status: Status }) {
@@ -48,7 +49,7 @@ function Step({ label, status }: { label: string; status: Status }) {
   );
 }
 
-export function ProofStatus({ proof, decodedJwt, onVerificationSuccess }: ProofStatusProps) {
+export function ProofStatus({ proof, decodedJwt, onVerificationSuccess, publicSignals }: ProofStatusProps) {
   const [txHash, setTxHash] = useState<string | null>(null);
   const [status, setStatus] = useState<StepStatus>({
     jwtGeneration: 'pending',
@@ -58,6 +59,7 @@ export function ProofStatus({ proof, decodedJwt, onVerificationSuccess }: ProofS
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const toast = useToast();
+  const [orgName, setOrgName] = useState<string>('');
 
   useEffect(() => {
     if (decodedJwt) {
@@ -80,6 +82,14 @@ export function ProofStatus({ proof, decodedJwt, onVerificationSuccess }: ProofS
       }));
     }
   }, [proof]);
+
+  useEffect(() => {
+    if (publicSignals?.organization_hash) {
+      getOrganizationName(BigInt(publicSignals.organization_hash))
+        .then(name => setOrgName(name))
+        .catch(console.error);
+    }
+  }, [publicSignals]);
 
   const handleSubmitProof = async () => {
     if (!proof) return;
@@ -187,6 +197,12 @@ export function ProofStatus({ proof, decodedJwt, onVerificationSuccess }: ProofS
             </AccordionPanel>
           </AccordionItem>
         </Accordion>
+      )}
+
+      {orgName && (
+        <div className="text-sm text-gray-600">
+          Organization proven: {orgName}
+        </div>
       )}
 
       {proof && !txHash && (

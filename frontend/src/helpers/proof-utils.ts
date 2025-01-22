@@ -20,6 +20,12 @@ export async function generateProof(jwt: string) {
       signatureLength: inputsResponse.data.signature?.length
     });
 
+    // Extract domain from JWT payload
+    const payload = jwt.split('.')[1];
+    const decodedPayload = JSON.parse(atob(payload));
+    const email = decodedPayload.email;
+    const domain = email.split('@')[1]; // This will give us "gmail.com"
+    
     // Second call - generate proof
     console.log('Step 2: Calling proxyJwtProver with inputs');
     const proverResponse = await axios.post('/api/proxyJwtProver', {
@@ -30,12 +36,36 @@ export async function generateProof(jwt: string) {
       throw new Error('Invalid proof response from proxyJwtProver');
     }
 
+    // Add the extracted domain to the response
+    const proofData = {
+      ...proverResponse.data,
+      publicSignals: {
+        ...proverResponse.data.publicSignals,
+        organization_name: domain
+      }
+    };
+
     console.log('Step 3: Proof generated successfully:', {
       proof: 'Generated',
       publicSignals: proverResponse.data.publicSignals
     });
 
-    return proverResponse.data;
+    console.log('Proof response:', {
+      proof: proverResponse.data.proof,
+      publicSignals: proverResponse.data.publicSignals,
+      organizationName: proverResponse.data.publicSignals.organization_name
+    });
+
+    console.log('JWT Proof Generation:', {
+      inputData: inputsResponse.data,
+      proofResponse: proverResponse.data,
+      publicSignals: {
+        organization_hash: proverResponse.data.publicSignals.organization_hash,
+        organization_name: proverResponse.data.publicSignals.organization_name
+      }
+    });
+
+    return proofData;
   } catch (error: any) {
     console.error('Proof generation error:', {
       message: error.message,
@@ -45,7 +75,3 @@ export async function generateProof(jwt: string) {
     throw new Error(error.response?.data?.error || error.message);
   }
 }
-
-export function getOrganizationFromHash(hash: string): string {
-  return 'gmail.com';
-} 
