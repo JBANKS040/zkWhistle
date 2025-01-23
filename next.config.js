@@ -38,6 +38,10 @@ const nextConfig = {
       },
     ]
   },
+  // Suppress the data attributes warning
+  compiler: {
+    removeConsole: process.env.NODE_ENV === "production",
+  },
 }
 
 module.exports = nextConfig 
