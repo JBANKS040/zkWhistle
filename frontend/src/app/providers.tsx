@@ -1,9 +1,10 @@
 'use client';
 
+import { ChakraProvider } from '@chakra-ui/react';
+import { theme } from '@/theme';
 import posthog from 'posthog-js';
 import { PostHogProvider } from 'posthog-js/react';
 import { GoogleOAuthProvider } from '@react-oauth/google';
-import { ChakraProvider } from '@chakra-ui/react';
 import { GOOGLE_CONFIG } from '@/config/google';
 
 if (typeof window !== 'undefined' && process.env.NEXT_PUBLIC_POSTHOG_KEY) {
@@ -18,7 +19,7 @@ export function CSPostHogProvider({ children }: { children: React.ReactNode }) {
   return (
     <PostHogProvider client={posthog}>
       <GoogleOAuthProvider clientId={GOOGLE_CONFIG.clientId}>
-        <ChakraProvider>{children}</ChakraProvider>
+        <ChakraProvider theme={theme}>{children}</ChakraProvider>
       </GoogleOAuthProvider>
     </PostHogProvider>
   );

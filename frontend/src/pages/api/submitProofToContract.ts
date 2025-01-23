@@ -41,7 +41,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         formattedProof.pA,
         formattedProof.pB,
         formattedProof.pC,
-        formattedProof.pubSignals
+        formattedProof.pubSignals,
+        "Unknown Organization"  // Add default organization name
       ] as const
     });
 

@@ -1,7 +1,6 @@
-import { theme as baseTheme } from '@chakra-ui/theme'
-import { extendTheme as chakraExtendTheme } from '@chakra-ui/theme-utils'
+import { extendTheme } from '@chakra-ui/react'
 
-export const theme = chakraExtendTheme({
+export const theme = extendTheme({
   fonts: {
     heading: 'var(--font-geist-sans)',
     body: 'var(--font-geist-sans)',
@@ -14,4 +13,4 @@ export const theme = chakraExtendTheme({
       },
     },
   },
-}, baseTheme) 
+}) 

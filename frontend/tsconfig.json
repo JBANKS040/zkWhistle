@@ -27,16 +27,13 @@
         "./src/*"
       ]
     },
-    "typeRoots": [
-      "./node_modules/@types",
-      "./src/types"
-    ]
+    "baseUrl": ".",
+    "types": ["node"]
   },
   "include": [
+    "next-env.d.ts",
     "**/*.ts",
     "**/*.tsx",
-    "./src/types/**/*.d.ts",
-    "next-env.d.ts",
     ".next/types/**/*.ts"
   ],
   "exclude": [

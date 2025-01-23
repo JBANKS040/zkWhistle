@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { Circle, HStack, Text, VStack, Button, Spinner, Box, Accordion, AccordionItem, AccordionButton, AccordionPanel, AccordionIcon, Link, Code, useToast } from '@chakra-ui/react';
-import { CheckIcon, ExternalLinkIcon } from '@chakra-ui/icons';
 import { verifyProofWithWallet, getOrganizationName } from '@/helpers/contract-utils';
+import { CheckIcon, ExternalLinkIcon } from '@chakra-ui/icons';
 
 type Status = 'pending' | 'success' | 'loading';
 
