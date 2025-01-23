@@ -2,8 +2,6 @@
   "name": "zkwhistle",
   "private": true,
   "type": "module",
-  "scripts": {
-  },
   "dependencies": {
     "@chakra-ui/icons": "^2.2.4",
     "@openzeppelin/contracts": "^4.9.3",
