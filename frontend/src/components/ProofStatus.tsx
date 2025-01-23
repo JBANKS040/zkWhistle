@@ -86,7 +86,7 @@ export function ProofStatus({ proof, decodedJwt, onVerificationSuccess, publicSi
   useEffect(() => {
     if (publicSignals?.organization_hash) {
       getOrganizationName(BigInt(publicSignals.organization_hash))
-        .then(name => setOrgName(name))
+        .then(name => setOrgName(name || 'Unknown Organization'))
         .catch(console.error);
     }
   }, [publicSignals]);

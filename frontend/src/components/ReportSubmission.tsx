@@ -34,7 +34,7 @@ export function ReportSubmission({ onSuccess, onError }: ReportSubmissionProps) 
         if (accounts[0]) {
           const orgHash = await getVerifiedOrganization(accounts[0]);
           const orgName = await getOrganizationName(orgHash);
-          setVerifiedOrg(orgName);
+          setVerifiedOrg(orgName || '');
         }
       }
     };
@@ -54,7 +54,10 @@ export function ReportSubmission({ onSuccess, onError }: ReportSubmissionProps) 
         const orgName = await getOrganizationName(report.organizationHash);
         reports.push({ ...report, organizationName: orgName });
       }
-      setSubmittedReports(reports);
+      setSubmittedReports(reports.map(report => ({
+        ...report,
+        organizationName: report.organizationName || 'Unknown Organization'
+      })));
     } catch (error) {
       console.error('Failed to load reports:', error);
     }
@@ -88,7 +91,7 @@ export function ReportSubmission({ onSuccess, onError }: ReportSubmissionProps) 
       const submitted = await getReport(reportId);
       const orgName = await getOrganizationName(submitted.organizationHash);
       
-      setSubmittedReports(prev => [...prev, { ...submitted, organizationName: orgName }]);
+      setSubmittedReports(prev => [...prev, { ...submitted, organizationName: orgName || 'Unknown Organization' }]);
       setReport({ title: '', content: '' });
       onSuccess?.(reportId);
       

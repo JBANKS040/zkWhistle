@@ -37,7 +37,7 @@ export async function generateProof(jwt: string) {
 
     // Add the extracted domain to the response
     const proofData = {
-      ...proverResponse.data,
+      proof: proverResponse.data.proof,
       publicSignals: {
         ...proverResponse.data.publicSignals,
         organization_name: domain

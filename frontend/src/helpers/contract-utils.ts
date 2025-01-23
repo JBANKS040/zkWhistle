@@ -103,14 +103,26 @@ export async function getGasPrice() {
   return gasPrice;
 }
 
-// Function to get organization name
+// Add a cache for organization names
+const organizationNameCache = new Map<string, string>();
+
 export async function getOrganizationName(organizationHash: bigint) {
-  console.log('Getting organization name for hash:', organizationHash.toString());
+  const hashStr = organizationHash.toString();
+  
+  // Check cache first
+  if (organizationNameCache.has(hashStr)) {
+    return organizationNameCache.get(hashStr);
+  }
+
+  console.log('Getting organization name for hash:', hashStr);
   const name = await publicClient.readContract({
     ...VERIFIER_CONTRACT,
     functionName: 'getOrganizationName',
     args: [organizationHash]
   });
+  
+  // Cache the result
+  organizationNameCache.set(hashStr, name as string);
   console.log('Retrieved organization name:', name);
   return name;
 }

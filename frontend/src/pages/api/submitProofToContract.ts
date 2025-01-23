@@ -42,7 +42,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         formattedProof.pB,
         formattedProof.pC,
         formattedProof.pubSignals,
-        "Unknown Organization"  // Add default organization name
+        publicSignals.organization_name  // Use the domain extracted from JWT
       ] as const
     });
 
