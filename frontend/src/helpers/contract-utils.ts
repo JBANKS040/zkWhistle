@@ -119,10 +119,6 @@ export async function submitReport(title: string, content: string): Promise<bigi
       throw new Error('Organization not verified');
     }
 
-    if (!isTrustedOrganization(orgHash)) {
-      throw new Error('Organization not trusted');
-    }
-
     const { request } = await publicClient.simulateContract({
       ...REPORT_CONTRACT,
       functionName: 'submitReport',

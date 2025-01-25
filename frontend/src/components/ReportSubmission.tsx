@@ -22,6 +22,7 @@ export function ReportSubmission({ onSuccess, onError }: ReportSubmissionProps) 
   const [submissionStatus, setSubmissionStatus] = useState<'initial' | 'success' | 'error'>('initial');
   const [submittedReport, setSubmittedReport] = useState<Report | null>(null);
   const [verifiedOrg, setVerifiedOrg] = useState<string>('');
+  const [isVerified, setIsVerified] = useState(false);
   const toast = useToast();
 
   // Load reports on component mount
@@ -30,17 +31,34 @@ export function ReportSubmission({ onSuccess, onError }: ReportSubmissionProps) 
   }, []);
 
   useEffect(() => {
-    const getVerifiedOrg = async () => {
+    const checkVerification = async () => {
       if (typeof window.ethereum !== 'undefined') {
         const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
         if (accounts[0]) {
           const orgHash = await getVerifiedOrganization(accounts[0]);
-          const orgName = await getOrganizationName(orgHash);
-          setVerifiedOrg(orgName || '');
+          if (orgHash !== BigInt(0)) {
+            const orgName = await getOrganizationName(orgHash);
+            setVerifiedOrg(orgName || '');
+            setIsVerified(true);
+          } else {
+            setIsVerified(false);
+          }
         }
       }
     };
-    getVerifiedOrg();
+    
+    checkVerification();
+    
+    // Add event listener for account changes
+    if (window.ethereum) {
+      window.ethereum.on('accountsChanged', checkVerification);
+    }
+    
+    return () => {
+      if (window.ethereum) {
+        window.ethereum.removeListener('accountsChanged', checkVerification);
+      }
+    };
   }, []);
 
   // Add function to get organization name from hash
@@ -69,7 +87,7 @@ export function ReportSubmission({ onSuccess, onError }: ReportSubmissionProps) 
     }
   };
 
-  // Update handleSubmit to use HashedDomains
+  // Update handleSubmit to remove the HashedDomains check
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -92,16 +110,10 @@ export function ReportSubmission({ onSuccess, onError }: ReportSubmissionProps) 
         throw new Error('Organization not verified');
       }
 
-      // Check if organization is in HashedDomains
-      const hexHash = ('0x' + orgHash.toString(16).padStart(64, '0')) as `0x${string}`;
-      if (!(hexHash in (HashedDomains as HashedDomainsType))) {
-        throw new Error('Organization not in trusted list');
-      }
-
       // Submit report
       const reportId = await submitReport(report.title!, report.content!);
       const submitted = await getReport(reportId);
-      const orgName = getOrgNameFromHash(submitted.organizationHash);
+      const orgName = getOrganizationName(submitted.organizationHash);
       
       setSubmittedReports(prev => [...prev, { ...submitted, organizationName: orgName }]);
       setReport({ title: '', content: '' });
@@ -136,6 +148,15 @@ export function ReportSubmission({ onSuccess, onError }: ReportSubmissionProps) 
   return (
     <Box>
       <VStack spacing={4}>
+        {isVerified ? (
+          <Text color="green.500" fontWeight="medium">
+            Organization verified! You can now submit reports.
+          </Text>
+        ) : (
+          <Text color="orange.500" fontWeight="medium">
+            Please verify your organization before submitting reports.
+          </Text>
+        )}
         <FormControl mb={4}>
           <FormLabel>Your verified organization</FormLabel>
           <Input

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Circle, HStack, Text, VStack, Button, Spinner, Box, Accordion, AccordionItem, AccordionButton, AccordionPanel, AccordionIcon, Link, Code, useToast } from '@chakra-ui/react';
 import { verifyProofWithWallet, getOrganizationName } from '@/helpers/contract-utils';
 import { CheckIcon, ExternalLinkIcon } from '@chakra-ui/icons';
+import { publicClient } from '@/lib/ethers';
 
 type Status = 'pending' | 'success' | 'loading';
 
@@ -104,20 +105,28 @@ export function ProofStatus({ proof, decodedJwt, onVerificationSuccess, publicSi
       console.log('Transaction submitted:', hash);
       setTxHash(hash);
       
-      setStatus(prev => ({
-        ...prev,
-        contractSubmission: 'success'
-      }));
-
-      toast({
-        title: 'Proof submitted successfully',
-        description: 'Your organization verification is being processed',
-        status: 'success',
-        duration: 5000,
-        isClosable: true,
+      // Wait for transaction confirmation
+      const receipt = await publicClient.waitForTransactionReceipt({ 
+        hash,
+        confirmations: 1
       });
 
-      onVerificationSuccess?.(hash);
+      if (receipt.status === 'success') {
+        setStatus(prev => ({
+          ...prev,
+          contractSubmission: 'success'
+        }));
+
+        toast({
+          title: 'Proof submitted successfully',
+          description: 'Your organization verification is complete',
+          status: 'success',
+          duration: 5000,
+          isClosable: true,
+        });
+
+        onVerificationSuccess?.(hash);
+      }
     } catch (error) {
       console.error('Error submitting proof:', error);
       toast({
