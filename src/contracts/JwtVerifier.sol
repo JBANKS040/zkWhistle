@@ -19,9 +19,6 @@ contract JwtVerifier {
     // Map addresses to their verified organization hash
     mapping(address => uint256) public addressToOrganization;
 
-    // Add this mapping
-    mapping(uint256 => string) public organizationNames;
-
     constructor() {
         verifier = new Groth16Verifier();
     }
@@ -30,8 +27,7 @@ contract JwtVerifier {
         uint256[2] calldata _pA,
         uint256[2][2] calldata _pB,
         uint256[2] calldata _pC,
-        uint256[1] calldata _pubSignals,
-        string calldata _organizationName
+        uint256[1] calldata _pubSignals
     ) external returns (bool) {
         // Generate unique proof hash
         bytes32 proofHash = keccak256(
@@ -51,9 +47,6 @@ contract JwtVerifier {
         // Store the organization hash for the sender
         addressToOrganization[msg.sender] = _pubSignals[0];
 
-        // Store the actual organization name from the proof
-        organizationNames[_pubSignals[0]] = _organizationName;
-
         // Emit event with proof hash, organization hash, and verifier address
         emit ProofVerified(proofHash, _pubSignals[0], msg.sender);
 
@@ -65,9 +58,5 @@ contract JwtVerifier {
         return addressToOrganization[user];
     }
 
-    // Add a function to get the name
-    function getOrganizationName(uint256 organizationHash) public view returns (string memory) {
-        string memory name = organizationNames[organizationHash];
-        return bytes(name).length > 0 ? name : "Unknown Organization";
-    }
+    // Update getOrganizationName to use HashedDomains.json on frontend instead
 }

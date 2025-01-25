@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import { Box, Button, FormControl, FormLabel, Input, Textarea, VStack, Text, useToast, Heading } from '@chakra-ui/react';
-import { submitReport, getVerifiedOrganization, getReport, getOrganizationName } from '@/helpers/contract-utils';
+import { submitReport, getVerifiedOrganization, getReport, getOrganizationName, isTrustedOrganization } from '@/helpers/contract-utils';
 import type { Report } from '@/types/report';
 import { publicClient } from '@/lib/ethers';
 import { REPORT_CONTRACT } from '@/config/contracts';
+import HashedDomains from '@/config/HashedDomains.json';
+import type { HashedDomainsType } from '@/types/hashedDomains';
 
 interface ReportSubmissionProps {
   onSuccess?: (reportId: bigint) => void;
@@ -41,6 +43,13 @@ export function ReportSubmission({ onSuccess, onError }: ReportSubmissionProps) 
     getVerifiedOrg();
   }, []);
 
+  // Add function to get organization name from hash
+  const getOrgNameFromHash = (hash: bigint): string => {
+    const hexHash = ('0x' + hash.toString(16).padStart(64, '0')) as `0x${string}`;
+    return (HashedDomains as HashedDomainsType)[hexHash] || 'Unknown Organization';
+  };
+
+  // Update loadReports to use HashedDomains
   const loadReports = async () => {
     try {
       const reportCount = await publicClient.readContract({
@@ -51,18 +60,16 @@ export function ReportSubmission({ onSuccess, onError }: ReportSubmissionProps) 
       const reports = [];
       for (let i = 0; i < Number(reportCount); i++) {
         const report = await getReport(BigInt(i));
-        const orgName = await getOrganizationName(report.organizationHash);
+        const orgName = getOrgNameFromHash(report.organizationHash);
         reports.push({ ...report, organizationName: orgName });
       }
-      setSubmittedReports(reports.map(report => ({
-        ...report,
-        organizationName: report.organizationName || 'Unknown Organization'
-      })));
+      setSubmittedReports(reports);
     } catch (error) {
       console.error('Failed to load reports:', error);
     }
   };
 
+  // Update handleSubmit to use HashedDomains
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -79,19 +86,24 @@ export function ReportSubmission({ onSuccess, onError }: ReportSubmissionProps) 
         throw new Error('No account selected');
       }
 
-      // Verify organization status
+      // Get current organization hash
       const orgHash = await getVerifiedOrganization(accounts[0]);
       if (orgHash === BigInt(0)) {
         throw new Error('Organization not verified');
       }
 
+      // Check if organization is in HashedDomains
+      const hexHash = ('0x' + orgHash.toString(16).padStart(64, '0')) as `0x${string}`;
+      if (!(hexHash in (HashedDomains as HashedDomainsType))) {
+        throw new Error('Organization not in trusted list');
+      }
+
       // Submit report
-      console.log('Submitting report:', { title: report.title, content: report.content });
       const reportId = await submitReport(report.title!, report.content!);
       const submitted = await getReport(reportId);
-      const orgName = await getOrganizationName(submitted.organizationHash);
+      const orgName = getOrgNameFromHash(submitted.organizationHash);
       
-      setSubmittedReports(prev => [...prev, { ...submitted, organizationName: orgName || 'Unknown Organization' }]);
+      setSubmittedReports(prev => [...prev, { ...submitted, organizationName: orgName }]);
       setReport({ title: '', content: '' });
       onSuccess?.(reportId);
       

@@ -23,7 +23,6 @@ export interface ProofData {
 
 export type PublicSignals = {
   organization_hash: string;
-  organization_name: string;
 }
 
 export interface CircuitProof {

@@ -1,6 +1,6 @@
-// Hardcode the deployed contract addresses
-export const VERIFIER_ADDRESS = '0x50C6D766C7313928D0a37929f2efFdA28B0cdA85';
-export const REPORT_ADDRESS = '0x0967Feef718cFF36099c633BaF6644e3B3f1a4F9';
+// Update contract addresses
+export const VERIFIER_ADDRESS = '0x9e4394caC3b4F3Ebcd7cB32d4Fd7F55B8D2a8B25';
+export const REPORT_ADDRESS = '0xc35570465a0EE1939C012070B2B762be02e48290';
 
 export const VERIFIER_CONTRACT = {
   address: VERIFIER_ADDRESS,
@@ -10,8 +10,7 @@ export const VERIFIER_CONTRACT = {
         {"internalType": "uint256[2]", "name": "_pA", "type": "uint256[2]"},
         {"internalType": "uint256[2][2]", "name": "_pB", "type": "uint256[2][2]"},
         {"internalType": "uint256[2]", "name": "_pC", "type": "uint256[2]"},
-        {"internalType": "uint256[1]", "name": "_pubSignals", "type": "uint256[1]"},
-        {"internalType": "string", "name": "_organizationName", "type": "string"}
+        {"internalType": "uint256[1]", "name": "_pubSignals", "type": "uint256[1]"}
       ],
       "name": "verifyProof",
       "outputs": [{"internalType": "bool", "name": "", "type": "bool"}],

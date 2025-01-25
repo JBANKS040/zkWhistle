@@ -3,6 +3,8 @@ import { baseSepolia } from 'viem/chains';
 import { VERIFIER_CONTRACT, REPORT_CONTRACT } from '@/config/contracts';
 import { ProofData, PublicSignals } from '@/types/circuit';
 import { keccak256, toHex } from 'viem'
+import type { HashedDomainsType } from '@/types/hashedDomains';
+import HashedDomains from '@/config/HashedDomains.json';
 
 // Define Base Sepolia chain configuration
 export const baseSepoliaChain = {
@@ -32,29 +34,16 @@ export const getWalletClient = () => {
   });
 };
 
-// Function to verify proof using connected wallet
+// Function to verify proof - doesn't need HashedDomains
 export async function verifyProofWithWallet(
   proof: ProofData, 
   publicSignals: PublicSignals
 ) {
-  console.log('Verifying proof with:', {
-    organization_hash: publicSignals.organization_hash,
-    organization_name: publicSignals.organization_name,
-    formatted_hash: BigInt(publicSignals.organization_hash).toString()
-  });
-
-  console.log('Starting verifyProofWithWallet with:', {
-    proof: proof,
-    publicSignals: publicSignals,
-    organizationName: publicSignals.organization_name
-  });
-
   const walletClient = await getWalletClient();
   if (!walletClient) throw new Error('Wallet not connected');
 
   const [address] = await walletClient.getAddresses();
   
-  // Format proof for contract
   const formattedProof = {
     pA: proof.pi_a.slice(0, 2).map(x => BigInt(x)) as [bigint, bigint],
     pB: [
@@ -65,9 +54,6 @@ export async function verifyProofWithWallet(
     pubSignals: [BigInt(publicSignals.organization_hash)] as [bigint]
   };
 
-  console.log('Formatted proof:', formattedProof);
-  console.log('Organization name being sent:', publicSignals.organization_name);
-  
   const { request } = await publicClient.simulateContract({
     ...VERIFIER_CONTRACT,
     functionName: 'verifyProof',
@@ -75,25 +61,22 @@ export async function verifyProofWithWallet(
       formattedProof.pA,
       formattedProof.pB, 
       formattedProof.pC,
-      formattedProof.pubSignals,
-      publicSignals.organization_name
+      formattedProof.pubSignals
     ] as const,
     account: address
   });
 
   const hash = await walletClient.writeContract(request);
-  console.log('Verification transaction hash:', hash);
   return hash;
 }
 
-// Function to get verified organization for an address
+// Function to get verified organization hash
 export async function getVerifiedOrganization(address: string) {
-  const data = await publicClient.readContract({
+  return await publicClient.readContract({
     ...VERIFIER_CONTRACT,
     functionName: 'getVerifiedOrganization',
     args: [address as `0x${string}`]
   });
-  return data;
 }
 
 // Function to get gas price
@@ -106,25 +89,9 @@ export async function getGasPrice() {
 // Add a cache for organization names
 const organizationNameCache = new Map<string, string>();
 
-export async function getOrganizationName(organizationHash: bigint) {
-  const hashStr = organizationHash.toString();
-  
-  // Check cache first
-  if (organizationNameCache.has(hashStr)) {
-    return organizationNameCache.get(hashStr);
-  }
-
-  console.log('Getting organization name for hash:', hashStr);
-  const name = await publicClient.readContract({
-    ...VERIFIER_CONTRACT,
-    functionName: 'getOrganizationName',
-    args: [organizationHash]
-  });
-  
-  // Cache the result
-  organizationNameCache.set(hashStr, name as string);
-  console.log('Retrieved organization name:', name);
-  return name;
+export function getOrganizationName(orgHash: bigint): string {
+  const hexHash = ('0x' + orgHash.toString(16).padStart(64, '0')) as `0x${string}`;
+  return (HashedDomains as HashedDomainsType)[hexHash] || 'Unknown Organization';
 }
 
 // Replace the hardcoded event topic with dynamic generation
@@ -132,37 +99,38 @@ const REPORT_SUBMITTED_EVENT = keccak256(
   toHex('ReportSubmitted(uint256,uint256,uint256)')
 )
 
+// Only used during report submission
+export function isTrustedOrganization(orgHash: bigint): boolean {
+  const hexHash = '0x' + orgHash.toString(16).padStart(64, '0');
+  return hexHash in (HashedDomains as HashedDomainsType);
+}
+
+// Submit report - this is where we check HashedDomains
 export async function submitReport(title: string, content: string): Promise<bigint> {
-  console.log('Starting submitReport with:', { title, content });
-  
   const walletClient = await getWalletClient();
   if (!walletClient) throw new Error('Wallet not connected');
 
   const [address] = await walletClient.getAddresses();
   
   const orgHash = await getVerifiedOrganization(address);
-  console.log('Retrieved organization hash:', orgHash.toString());
-  
-  await debugContractSetup();
-  await checkVerifierSetup();
   
   try {
     if (orgHash === BigInt(0)) {
       throw new Error('Organization not verified');
     }
 
-    // Simulate with more detailed parameters
+    if (!isTrustedOrganization(orgHash)) {
+      throw new Error('Organization not trusted');
+    }
+
     const { request } = await publicClient.simulateContract({
-      address: REPORT_CONTRACT.address,
-      abi: REPORT_CONTRACT.abi,
+      ...REPORT_CONTRACT,
       functionName: 'submitReport',
-      args: [title, content],
-      account: address,
-      chain: baseSepoliaChain
+      args: [title, content] as const,
+      account: address
     });
 
     const hash = await walletClient.writeContract(request);
-    console.log('Transaction hash:', hash);
     
     const receipt = await publicClient.waitForTransactionReceipt({ 
       hash,
@@ -182,7 +150,6 @@ export async function submitReport(title: string, content: string): Promise<bigi
     if (err instanceof BaseError) {
       const revertError = err.walk(err => err instanceof ContractFunctionRevertedError);
       if (revertError instanceof ContractFunctionRevertedError) {
-        console.error('Contract revert reason:', revertError);
         throw new Error(`Contract reverted: ${revertError.toString() || 'Unknown reason'}`);
       }
     }
@@ -271,10 +238,9 @@ async function checkVerifierSetup() {
 }
 
 export async function getReport(reportId: bigint) {
-    const report = await publicClient.readContract({
-        ...REPORT_CONTRACT,
-        functionName: 'getReport',
-        args: [reportId]
-    });
-    return report;
+  return await publicClient.readContract({
+    ...REPORT_CONTRACT,
+    functionName: 'getReport',
+    args: [reportId]
+  });
 } 

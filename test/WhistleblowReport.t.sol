@@ -8,7 +8,6 @@ import "../src/contracts/JwtVerifier.sol";
 contract WhistleblowReportTest is Test {
     WhistleblowReport public whistleblowReport;
     JwtVerifier public jwtVerifier;
-    string constant TEST_ORG_NAME = "test.org";
     
     // Test proof data - same as in JwtVerifier.t.sol
     uint256[2] validProofA = [
@@ -36,6 +35,12 @@ contract WhistleblowReportTest is Test {
         21061343116936272860517744458130484610563107634320271795239076069837686875986
     ];
 
+    event ReportSubmitted(
+        uint256 indexed reportId,
+        uint256 indexed organizationHash,
+        uint256 timestamp
+    );
+
     function setUp() public {
         // Deploy verifier first
         jwtVerifier = new JwtVerifier();
@@ -49,13 +54,21 @@ contract WhistleblowReportTest is Test {
             validProofA,
             validProofB,
             validProofC,
-            validPubSignals,
-            TEST_ORG_NAME
+            validPubSignals
+        );
+
+        string memory title = "Test Report";
+        string memory content = "Test Content";
+
+        // Expect the ReportSubmitted event
+        vm.expectEmit(true, true, false, true);
+        emit ReportSubmitted(
+            0, // first report ID will be 0
+            validPubSignals[0],
+            block.timestamp
         );
 
         // Submit a report
-        string memory title = "Test Report";
-        string memory content = "Test Content";
         uint256 reportId = whistleblowReport.submitReport(title, content);
 
         // Verify report data
@@ -63,6 +76,7 @@ contract WhistleblowReportTest is Test {
         assertEq(report.title, title);
         assertEq(report.content, content);
         assertEq(report.organizationHash, validPubSignals[0]);
+        assertEq(report.timestamp, block.timestamp);
     }
 
     function testUnverifiedSubmission() public {
@@ -77,8 +91,7 @@ contract WhistleblowReportTest is Test {
             validProofA,
             validProofB,
             validProofC,
-            validPubSignals,
-            TEST_ORG_NAME
+            validPubSignals
         );
 
         // Submit reports and check count
@@ -87,5 +100,32 @@ contract WhistleblowReportTest is Test {
         
         whistleblowReport.submitReport("Test 2", "Content 2");
         assertEq(whistleblowReport.reportCount(), 2);
+    }
+
+    function testMultipleOrganizationReports() public {
+        address alice = address(0x1);
+        address bob = address(0x2);
+
+        // Verify Alice
+        vm.prank(alice);
+        jwtVerifier.verifyProof(
+            validProofA,
+            validProofB,
+            validProofC,
+            validPubSignals
+        );
+
+        // Alice submits a report
+        vm.prank(alice);
+        uint256 aliceReportId = whistleblowReport.submitReport("Alice Report", "Alice Content");
+
+        // Bob tries to submit without verification
+        vm.prank(bob);
+        vm.expectRevert("Sender not verified");
+        whistleblowReport.submitReport("Bob Report", "Bob Content");
+
+        // Verify report details
+        WhistleblowReport.Report memory aliceReport = whistleblowReport.getReport(aliceReportId);
+        assertEq(aliceReport.organizationHash, validPubSignals[0]);
     }
 } 
