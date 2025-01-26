@@ -22,12 +22,12 @@ export const publicClient = createPublicClient({
 });
 
 // Function to get wallet client
-export const getWalletClient = () => {
+export const getWalletClient = async () => {
   if (typeof window === 'undefined') return null;
   
   const ethereum = window.ethereum as EIP1193Provider | undefined;
   if (!ethereum) return null;
-  
+
   return createWalletClient({
     chain: baseSepoliaChain,
     transport: custom(ethereum)

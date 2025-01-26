@@ -2,7 +2,7 @@ import { Tabs, TabList, TabPanels, Tab, TabPanel, Box, useToast } from '@chakra-
 import { VerifyOrganization } from './VerifyOrganization';
 import { ReportSubmission } from './ReportSubmission';
 import { useState, useEffect } from 'react';
-import { getVerifiedOrganization } from '@/helpers/contract-utils';
+import { getVerifiedOrganization } from '@/helpers/contract-utils'
 
 interface MainTabsProps {
   proof: any;

@@ -48,4 +48,24 @@ export function splitJWT(jwt: string): [string, string, string] {
     throw new Error('Invalid JWT format');
   }
   return [parts[0], parts[1], parts[2]];
-} 
+}
+
+// Simple, focused JWT handling
+const sensitiveDataStore = new WeakMap();
+
+export const jwtHandler = {
+  store: (key: object, jwt: string) => {
+    sensitiveDataStore.set(key, jwt);
+    // Cleanup after use
+    setTimeout(() => sensitiveDataStore.delete(key), 5 * 60 * 1000);
+  },
+  
+  get: (key: object) => sensitiveDataStore.get(key),
+  
+  cleanup: (key: object) => {
+    sensitiveDataStore.delete(key);
+    if (process.env.NODE_ENV === 'development') {
+      console.clear();
+    }
+  }
+}; 

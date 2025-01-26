@@ -178,6 +178,12 @@ export function ProofStatus({ proof, decodedJwt, onVerificationSuccess, publicSi
                     {JSON.stringify(decodedJwt.payload, null, 2)}
                   </Code>
                 </Box>
+                <Box>
+                  <Text fontWeight="bold">Signature:</Text>
+                  <Code p={2} borderRadius="md" w="full">
+                    {JSON.stringify(decodedJwt.signature, null, 2)}
+                  </Code>
+                </Box>
               </VStack>
             </AccordionPanel>
           </AccordionItem>
