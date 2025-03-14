@@ -2,6 +2,7 @@ import { RSAPublicKey } from './types';
 import { MAX_MESSAGE_LENGTH, RSA_N_BITS, RSA_K_CHUNKS } from './constants';
 import { extractEmailDomain } from './email-utils';
 import { sha256Pad } from '@zk-email/helpers';
+import { keccak256, toHex } from 'viem';
 
 function rsaToCircomFormat(base64Str: string, numChunks: number): bigint[] {
   // Convert base64 to BigInt
@@ -23,7 +24,9 @@ function rsaToCircomFormat(base64Str: string, numChunks: number): bigint[] {
 
 export async function generateEmailJWTInputs(
   jwt: string, 
-  publicKey: RSAPublicKey
+  publicKey: RSAPublicKey,
+  reportTitle: string = "",
+  reportContent: string = ""
 ) {
   // Split and decode JWT
   const [headerB64, payloadB64, signatureB64] = jwt.split('.');
@@ -48,6 +51,25 @@ export async function generateEmailJWTInputs(
   const pubkeyBuffer = Buffer.from(publicKey.n, 'base64');
   const pubkeyBigInts = rsaToCircomFormat(publicKey.n, RSA_K_CHUNKS);
 
+  // Calculate report content hash
+  let reportContentHash = BigInt(0);
+  if (reportTitle && reportContent) {
+    // Use keccak256 to hash the report content
+    const contentForHashing = reportTitle + "|" + reportContent;
+    console.log('Hashing report content:', {
+      title: reportTitle.slice(0, 10) + '...',
+      contentLength: reportContent.length,
+      contentForHashing: contentForHashing.slice(0, 20) + '...'
+    });
+    
+    const hash = keccak256(toHex(contentForHashing));
+    console.log('Generated report hash:', hash);
+    reportContentHash = BigInt(hash);
+    console.log('Report content hash as BigInt:', reportContentHash.toString());
+  } else {
+    console.log('No report title or content provided, using 0 for reportContentHash');
+  }
+
   return {
     message: Array.from(messagePadded).map(b => BigInt(b)),
     messageLength: messagePaddedLen,
@@ -56,6 +78,7 @@ export async function generateEmailJWTInputs(
     periodIndex: jwt.indexOf('.'),
     emailDomainIndex: Number(domainIndex),
     emailDomainLength: Number(domainLength),
+    reportContentHash,
     jwt // Include original JWT for verification
   };
 } 

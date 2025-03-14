@@ -1,33 +1,13 @@
-// JwtVerifier contract types
-export type VerifierContractFunctions = {
-  verifyProof: {
-    inputs: [
-      { name: "_pA"; type: "uint256[2]" },
-      { name: "_pB"; type: "uint256[2][2]" },
-      { name: "_pC"; type: "uint256[2]" },
-      { name: "_pubSignals"; type: "uint256[1]" }
-    ]
-    outputs: [{ name: ""; type: "bool" }]
-    stateMutability: "nonpayable"
-  }
-  getVerifiedOrganization: {
-    inputs: [{ name: "user"; type: "address" }]
-    outputs: [{ name: ""; type: "uint256" }]
-    stateMutability: "view"
-  }
-  getOrganizationName: {
-    inputs: [{ name: "organizationHash"; type: "uint256" }]
-    outputs: [{ name: ""; type: "string" }]
-    stateMutability: "view"
-  }
-}
-
-// WhistleblowReport contract types
-export type ReportContractFunctions = {
+// ZkWhistleblower contract types
+export type ZkWhistleblowerContractFunctions = {
   submitReport: {
     inputs: [
       { name: "_title"; type: "string" },
-      { name: "_content"; type: "string" }
+      { name: "_content"; type: "string" },
+      { name: "_pA"; type: "uint256[2]" },
+      { name: "_pB"; type: "uint256[2][2]" },
+      { name: "_pC"; type: "uint256[2]" },
+      { name: "_pubSignals"; type: "uint256[2]" }
     ]
     outputs: [{ name: ""; type: "uint256" }]
     stateMutability: "nonpayable"
@@ -51,16 +31,35 @@ export type ReportContractFunctions = {
     outputs: [{ name: ""; type: "uint256" }]
     stateMutability: "view"
   }
-  verifier: {
+  skipVerification: {
     inputs: []
-    outputs: [{ name: ""; type: "address" }]
+    outputs: [{ name: ""; type: "bool" }]
     stateMutability: "view"
   }
+  setSkipVerification: {
+    inputs: [{ name: "_skip"; type: "bool" }]
+    outputs: []
+    stateMutability: "nonpayable"
+  }
+  verifiedProofs: {
+    inputs: [{ name: ""; type: "bytes32" }]
+    outputs: [{ name: ""; type: "bool" }]
+    stateMutability: "view"
+  }
+}
+
+// Legacy types for compatibility 
+export type VerifierContractFunctions = {
+  // empty or redirected to new functionality
+}
+
+export type ReportContractFunctions = {
+  // empty or redirected to new functionality
 }
 
 export type VerifierProofArgs = readonly [
   readonly [bigint, bigint], // _pA
   readonly [readonly [bigint, bigint], readonly [bigint, bigint]], // _pB
   readonly [bigint, bigint], // _pC
-  readonly [bigint], // _pubSignals
+  readonly [bigint, bigint], // _pubSignals - now has 2 elements
 ] 

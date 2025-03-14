@@ -28,13 +28,15 @@
       ]
     },
     "baseUrl": ".",
-    "types": ["node"]
+    "types": [
+      "node"
+    ]
   },
   "include": [
     "next-env.d.ts",
     "**/*.ts",
-    "**/*.tsx",
-    ".next/types/**/*.ts"
+    "**/*.tsx"
+    // ".next/types/**/*.ts" - Commented out until next build creates these files
   ],
   "exclude": [
     "node_modules"

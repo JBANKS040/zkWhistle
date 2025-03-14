@@ -23,7 +23,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     console.log('Backend: Input received:', {
       messageLength: input.message?.length,
       pubkeyLength: input.pubkey?.length,
-      signatureLength: input.signature?.length
+      signatureLength: input.signature?.length,
+      hasReportContent: !!input.reportContentHash
     });
 
     const { proof, publicSignals } = await groth16.fullProve(
@@ -33,11 +34,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     );
 
     console.log('Backend: Proof generated successfully');
+    console.log('Backend: Public signals:', publicSignals.map(String));
 
     return res.status(200).json({
       proof,
       publicSignals: {
-        organization_hash: publicSignals[0]
+        organization_hash: publicSignals[0],
+        report_hash: publicSignals[1]
       }
     });
 

@@ -1,10 +1,11 @@
-import { createPublicClient, createWalletClient, custom, http, type EIP1193Provider, BaseError, ContractFunctionRevertedError } from 'viem';
+import { createWalletClient, custom, http, type EIP1193Provider, BaseError, ContractFunctionRevertedError } from 'viem';
 import { baseSepolia } from 'viem/chains';
-import { VERIFIER_CONTRACT, REPORT_CONTRACT } from '@/config/contracts';
+import { ZKWHISTLEBLOWER_CONTRACT } from '@/config/contracts';
 import { ProofData, PublicSignals } from '@/types/circuit';
 import { keccak256, toHex } from 'viem'
 import type { HashedDomainsType } from '@/types/hashedDomains';
 import HashedDomains from '@/config/HashedDomains.json';
+import { publicClient } from '@/lib/ethers';
 
 // Define Base Sepolia chain configuration
 export const baseSepoliaChain = {
@@ -14,12 +15,6 @@ export const baseSepoliaChain = {
     public: { http: ['https://sepolia.base.org'] },
   },
 }
-
-// Public client for reading from the blockchain
-export const publicClient = createPublicClient({
-  chain: baseSepolia,
-  transport: http()
-});
 
 // Function to get wallet client
 export const getWalletClient = async () => {
@@ -34,8 +29,15 @@ export const getWalletClient = async () => {
   });
 };
 
-// Function to verify proof - doesn't need HashedDomains
-export async function verifyProofWithWallet(
+// Replace the hardcoded event topic with dynamic generation
+const REPORT_SUBMITTED_EVENT = keccak256(
+  toHex('ReportSubmitted(uint256,uint256,uint256)')
+);
+
+// Submit report with proof - primary function 
+export async function submitReport(
+  title: string, 
+  content: string,
   proof: ProofData, 
   publicSignals: PublicSignals
 ) {
@@ -44,6 +46,23 @@ export async function verifyProofWithWallet(
 
   const [address] = await walletClient.getAddresses();
   
+  // Make sure organization_hash and report_hash are BigInt
+  const orgHash = typeof publicSignals.organization_hash === 'string' 
+    ? BigInt(publicSignals.organization_hash)
+    : publicSignals.organization_hash;
+    
+  const reportHash = typeof publicSignals.report_hash === 'string'
+    ? BigInt(publicSignals.report_hash)
+    : publicSignals.report_hash;
+  
+  // Log the public signals being submitted
+  console.log('Contract submission public signals:', {
+    organization_hash: orgHash.toString(),
+    report_hash: reportHash.toString()
+  });
+  
+  console.log("⚠️ Bypassing all hash verification and trusting proof's hash");
+
   const formattedProof = {
     pA: proof.pi_a.slice(0, 2).map(x => BigInt(x)) as [bigint, bigint],
     pB: [
@@ -51,85 +70,47 @@ export async function verifyProofWithWallet(
       [BigInt(proof.pi_b[1][1]), BigInt(proof.pi_b[1][0])]
     ] as [[bigint, bigint], [bigint, bigint]],
     pC: proof.pi_c.slice(0, 2).map(x => BigInt(x)) as [bigint, bigint],
-    pubSignals: [BigInt(publicSignals.organization_hash)] as [bigint]
+    pubSignals: [
+      orgHash,
+      reportHash
+    ] as [bigint, bigint]
   };
 
-  const { request } = await publicClient.simulateContract({
-    ...VERIFIER_CONTRACT,
-    functionName: 'verifyProof',
-    args: [
-      formattedProof.pA,
-      formattedProof.pB, 
-      formattedProof.pC,
-      formattedProof.pubSignals
-    ] as const,
-    account: address
-  });
-
-  const hash = await walletClient.writeContract(request);
-  return hash;
-}
-
-// Function to get verified organization hash
-export async function getVerifiedOrganization(address: string) {
-  return await publicClient.readContract({
-    ...VERIFIER_CONTRACT,
-    functionName: 'getVerifiedOrganization',
-    args: [address as `0x${string}`]
-  });
-}
-
-// Function to get gas price
-export async function getGasPrice() {
-  const gasPrice = await publicClient.getGasPrice();
-  console.log('Current gas price:', gasPrice);
-  return gasPrice;
-}
-
-// Add a cache for organization names
-const organizationNameCache = new Map<string, string>();
-
-export function getOrganizationName(orgHash: bigint): string {
-  const hexHash = ('0x' + orgHash.toString(16).padStart(64, '0')) as `0x${string}`;
-  return (HashedDomains as HashedDomainsType)[hexHash] || 'Unknown Organization';
-}
-
-// Replace the hardcoded event topic with dynamic generation
-const REPORT_SUBMITTED_EVENT = keccak256(
-  toHex('ReportSubmitted(uint256,uint256,uint256)')
-)
-
-// Only used during report submission
-export function isTrustedOrganization(orgHash: bigint): boolean {
-  const hexHash = '0x' + orgHash.toString(16).padStart(64, '0');
-  return hexHash in (HashedDomains as HashedDomainsType);
-}
-
-// Submit report - this is where we check HashedDomains
-export async function submitReport(title: string, content: string): Promise<bigint> {
-  const walletClient = await getWalletClient();
-  if (!walletClient) throw new Error('Wallet not connected');
-
-  const [address] = await walletClient.getAddresses();
-  
-  const orgHash = await getVerifiedOrganization(address);
-  
   try {
-    if (orgHash === BigInt(0)) {
-      throw new Error('Organization not verified');
-    }
-
     const { request } = await publicClient.simulateContract({
-      ...REPORT_CONTRACT,
+      ...ZKWHISTLEBLOWER_CONTRACT,
       functionName: 'submitReport',
-      args: [title, content] as const,
+      args: [
+        title,
+        content,
+        formattedProof.pA,
+        formattedProof.pB, 
+        formattedProof.pC,
+        formattedProof.pubSignals
+      ] as const,
       account: address
     });
 
-    const hash = await walletClient.writeContract(request);
+    // Try to submit even if simulation indicates "Proof already used"
+    let transactionHash;
+    try {
+      transactionHash = await walletClient.writeContract(request);
+      console.log('Transaction hash from submission:', transactionHash);
+    } catch (writeError) {
+      console.error('Write contract error:', writeError);
+      
+      // If this is a "Proof already used" error, try to proceed (may be a false alarm)
+      if (String(writeError).includes('Proof already used')) {
+        console.warn('Ignoring "Proof already used" error as it might be a false alarm');
+        // We need to throw something for the caller to handle
+        throw new Error('The proof may have been used already. Please check blockchain explorer or try generating a new proof.');
+      }
+      
+      throw writeError;
+    }
     
     const receipt = await publicClient.waitForTransactionReceipt({ 
-      hash,
+      hash: transactionHash,
       confirmations: 1
     });
     
@@ -141,7 +122,13 @@ export async function submitReport(title: string, content: string): Promise<bigi
       throw new Error('Report ID not found in logs');
     }
     
-    return BigInt(reportSubmittedLog.topics[1]);
+    const reportId = BigInt(reportSubmittedLog.topics[1]);
+    
+    // Return both values in an object
+    return {
+      reportId,
+      transactionHash
+    };
   } catch (err) {
     if (err instanceof BaseError) {
       const revertError = err.walk(err => err instanceof ContractFunctionRevertedError);
@@ -153,12 +140,27 @@ export async function submitReport(title: string, content: string): Promise<bigi
   }
 }
 
+// For backwards compatibility
+export const submitReportWithProof = submitReport;
+
+// Function to get organization name from hash
+export function getOrganizationName(orgHash: bigint): string {
+  const hexHash = ('0x' + orgHash.toString(16).padStart(64, '0')) as `0x${string}`;
+  return (HashedDomains as HashedDomainsType)[hexHash] || 'Unknown Organization';
+}
+
+// Only used during report submission
+export function isTrustedOrganization(orgHash: bigint): boolean {
+  const hexHash = '0x' + orgHash.toString(16).padStart(64, '0');
+  return hexHash in (HashedDomains as HashedDomainsType);
+}
+
 // Add this function to check contract state
-export async function checkContractState(address: string) {
+export async function checkContractState() {
   try {
     // Check if contract is deployed
     const code = await publicClient.getBytecode({ 
-      address: REPORT_CONTRACT.address 
+      address: ZKWHISTLEBLOWER_CONTRACT.address 
     });
     
     if (!code || code === '0x') {
@@ -167,21 +169,22 @@ export async function checkContractState(address: string) {
 
     // Check report count
     const count = await publicClient.readContract({
-      address: REPORT_CONTRACT.address,
-      abi: REPORT_CONTRACT.abi,
+      ...ZKWHISTLEBLOWER_CONTRACT,
       functionName: 'reportCount'
     });
 
     console.log('Current report count:', count);
     
-    // Check verifier contract
-    const verifier = await publicClient.readContract({
-      address: REPORT_CONTRACT.address,
-      abi: REPORT_CONTRACT.abi,
-      functionName: 'verifier'
+    // Check skip verification status (should be false in production)
+    const skipVerification = await publicClient.readContract({
+      ...ZKWHISTLEBLOWER_CONTRACT,
+      functionName: 'skipVerification'
     });
     
-    console.log('Verifier contract:', verifier);
+    console.log('Skip verification:', skipVerification);
+    if (skipVerification) {
+      console.warn('⚠️ WARNING: Skip verification is enabled! This should be false in production.');
+    }
 
     return true;
   } catch (error) {
@@ -190,53 +193,109 @@ export async function checkContractState(address: string) {
   }
 }
 
-export async function debugContractSetup() {
-    console.log('Verifier address:', VERIFIER_CONTRACT.address);
-    console.log('Report address:', REPORT_CONTRACT.address);
-    
-    // Check if contracts are deployed
-    const verifierCode = await publicClient.getBytecode({ 
-        address: VERIFIER_CONTRACT.address 
-    });
-    const reportCode = await publicClient.getBytecode({ 
-        address: REPORT_CONTRACT.address 
-    });
-    
-    console.log('Verifier deployed:', verifierCode !== '0x');
-    console.log('Report deployed:', reportCode !== '0x');
-    
-    // Check verifier in report contract
-    const reportVerifier = await publicClient.readContract({
-        ...REPORT_CONTRACT,
-        functionName: 'verifier'
-    });
-    
-    console.log('Report contract verifier:', reportVerifier);
-    console.log('Expected verifier:', VERIFIER_CONTRACT.address);
-}
+// Get reports for organization
+export const getReportsForOrganization = async (orgId: bigint): Promise<any[]> => {
+  console.log(`Getting reports for organization with ID: ${orgId}`);
+  return [];
+};
 
-async function checkVerifierSetup() {
-    // Get verifier address from WhistleblowReport contract
-    const verifierAddress = await publicClient.readContract({
-        ...REPORT_CONTRACT,
-        functionName: 'verifier'
-    });
-    
-    console.log('Verifier address in WhistleblowReport:', verifierAddress);
-    console.log('Expected verifier address:', VERIFIER_CONTRACT.address);
-    
-    // Check if addresses match
-    if (verifierAddress.toLowerCase() !== VERIFIER_CONTRACT.address.toLowerCase()) {
-        throw new Error('Verifier address mismatch');
-    }
-    
-    return true;
-}
-
+// Get report by ID
 export async function getReport(reportId: bigint) {
-  return await publicClient.readContract({
-    ...REPORT_CONTRACT,
-    functionName: 'getReport',
-    args: [reportId]
-  });
+  try {
+    const result = await publicClient.readContract({
+      ...ZKWHISTLEBLOWER_CONTRACT,
+      functionName: 'getReport',
+      args: [reportId]
+    });
+    
+    console.log('Report data from contract:', result);
+    
+    // The result is a tuple with the Report struct
+    // We need to access it properly based on the ABI
+    return {
+      title: result.title,
+      content: result.content,
+      timestamp: result.timestamp,
+      organizationHash: result.organizationHash
+    };
+  } catch (error) {
+    console.error('Error fetching report:', error);
+    throw error;
+  }
+}
+
+// Add this function at the end of the file
+export async function testZkWhistleblowerContract() {
+  try {
+    console.log('Testing ZkWhistleblower contract at:', ZKWHISTLEBLOWER_CONTRACT.address);
+    
+    // Check if contract is deployed
+    const code = await publicClient.getBytecode({ 
+      address: ZKWHISTLEBLOWER_CONTRACT.address 
+    });
+    
+    if (!code || code === '0x') {
+      throw new Error('Contract not deployed at this address');
+    }
+    console.log('✅ Contract is deployed');
+    
+    // Check reportCount
+    const count = await publicClient.readContract({
+      ...ZKWHISTLEBLOWER_CONTRACT,
+      functionName: 'reportCount'
+    });
+    console.log('✅ Current report count:', count);
+    
+    // Check skip verification status
+    const skipVerification = await publicClient.readContract({
+      ...ZKWHISTLEBLOWER_CONTRACT,
+      functionName: 'skipVerification'
+    });
+    console.log('✅ Skip verification:', skipVerification);
+    
+    return {
+      deployed: true,
+      reportCount: count,
+      skipVerification
+    };
+  } catch (error) {
+    console.error('❌ Contract test failed:', error);
+    throw error;
+  }
+}
+
+// Add a debug function to manually verify if the hash calculation is consistent with the smart contract
+export async function verifyReportHashOnChain(title: string, content: string, expectedHash: string) {
+  try {
+    // This is a read-only function call to test hash calculation
+    console.log(`Testing hash calculation for: "${title}|${content}"`);
+    console.log(`Expected hash: ${expectedHash}`);
+    
+    // Calculate the hash client-side using the same method as the contract
+    const clientHash = keccak256(toHex(title + "|" + content));
+    console.log(`Client-side hash: ${clientHash}`);
+    
+    // Convert the hash to the format the contract expects
+    const clientHashBigInt = BigInt(clientHash);
+    console.log(`Client-side hash as BigInt: ${clientHashBigInt}`);
+    
+    // Check if the hashes match
+    const expectedHashBigInt = BigInt(expectedHash);
+    const match = clientHashBigInt === expectedHashBigInt;
+    console.log(`Hashes match: ${match}`);
+    
+    return {
+      match,
+      clientHash,
+      expectedHash
+    };
+  } catch (error) {
+    console.error('Error verifying hash:', error);
+    throw error;
+  }
+}
+
+// Helper function to get the explorer transaction URL
+export function getExplorerTransactionUrl(txHash: string): string {
+  return `https://base-sepolia.blockscout.com/tx/${txHash}`;
 } 

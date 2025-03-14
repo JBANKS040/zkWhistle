@@ -14,9 +14,11 @@ template EmailWhistleblower() {
     signal input periodIndex;    
     signal input emailDomainIndex;  
     signal input emailDomainLength; 
+    signal input reportContentHash;
     
     // Output signals
     signal output organization_hash;
+    signal output report_hash;
     
     // Calculate exact Base64 dimensions
     var maxB64PayloadLength = 1368;  // Next multiple of 4 after 1366
@@ -44,8 +46,9 @@ template EmailWhistleblower() {
     domainExtractor.domainIndex <== emailDomainIndex;
     domainExtractor.domainLength <== emailDomainLength;
     
-    // Connect output
+    // Connect outputs
     organization_hash <== domainExtractor.domain_hash;
+    report_hash <== reportContentHash;
 }
 
 component main = EmailWhistleblower();

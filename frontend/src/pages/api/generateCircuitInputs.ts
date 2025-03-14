@@ -8,7 +8,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const { jwt } = req.body;
+    const { jwt, reportTitle, reportContent } = req.body;
     if (!jwt) {
       return res.status(400).json({ error: 'Missing JWT' });
     }
@@ -19,12 +19,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const { kid } = JSON.parse(Buffer.from(header, 'base64').toString());
     const publicKey = await getGooglePublicKey(kid);
 
-    const circuitInputs = await generateEmailJWTInputs(jwt, publicKey);
+    const circuitInputs = await generateEmailJWTInputs(jwt, publicKey, reportTitle, reportContent);
     
     console.log('Backend: Circuit inputs generated successfully:', {
       messageLength: circuitInputs.message.length,
       pubkeyLength: circuitInputs.pubkey.length,
-      signatureLength: circuitInputs.signature.length
+      signatureLength: circuitInputs.signature.length,
+      hasReportContent: !!circuitInputs.reportContentHash
     });
 
     return res.status(200).json({
@@ -34,7 +35,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       signature: circuitInputs.signature.map(n => n.toString()),
       periodIndex: circuitInputs.periodIndex,
       emailDomainIndex: circuitInputs.emailDomainIndex,
-      emailDomainLength: circuitInputs.emailDomainLength
+      emailDomainLength: circuitInputs.emailDomainLength,
+      reportContentHash: circuitInputs.reportContentHash.toString()
     });
 
   } catch (error: any) {

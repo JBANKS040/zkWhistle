@@ -6,6 +6,7 @@ export interface CircuitInput {
   periodIndex: number
   emailDomainIndex: number
   emailDomainLength: number
+  reportContentHash: number
 }
 
 export interface FormattedProof {
@@ -25,4 +26,9 @@ export interface Proof {
     pi_c: string[]
   }
   publicSignals: string[]
+}
+
+export interface PublicSignalsFormatted {
+  organizationHash: `0x${string}`
+  reportHash: `0x${string}`
 } 

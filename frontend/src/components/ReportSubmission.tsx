@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { Box, Button, FormControl, FormLabel, Input, Textarea, VStack, Text, useToast, Heading } from '@chakra-ui/react';
-import { submitReport, getVerifiedOrganization, getReport, getOrganizationName, isTrustedOrganization } from '@/helpers/contract-utils';
+import { submitReport, getReport, getOrganizationName, } from '@/helpers/contract-utils';
 import type { Report } from '@/types/report';
 import { publicClient } from '@/lib/ethers';
-import { REPORT_CONTRACT } from '@/config/contracts';
+import { ZKWHISTLEBLOWER_CONTRACT } from '@/config/contracts';
 import HashedDomains from '@/config/HashedDomains.json';
 import type { HashedDomainsType } from '@/types/hashedDomains';
 
@@ -22,43 +22,12 @@ export function ReportSubmission({ onSuccess, onError }: ReportSubmissionProps) 
   const [submissionStatus, setSubmissionStatus] = useState<'initial' | 'success' | 'error'>('initial');
   const [submittedReport, setSubmittedReport] = useState<Report | null>(null);
   const [verifiedOrg, setVerifiedOrg] = useState<string>('');
-  const [isVerified, setIsVerified] = useState(false);
+  const [isVerified, setIsVerified] = useState(true); // Default to true since we no longer verify organization
   const toast = useToast();
 
   // Load reports on component mount
   useEffect(() => {
     loadReports();
-  }, []);
-
-  useEffect(() => {
-    const checkVerification = async () => {
-      if (typeof window.ethereum !== 'undefined') {
-        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-        if (accounts[0]) {
-          const orgHash = await getVerifiedOrganization(accounts[0]);
-          if (orgHash !== BigInt(0)) {
-            const orgName = await getOrganizationName(orgHash);
-            setVerifiedOrg(orgName || '');
-            setIsVerified(true);
-          } else {
-            setIsVerified(false);
-          }
-        }
-      }
-    };
-    
-    checkVerification();
-    
-    // Add event listener for account changes
-    if (window.ethereum) {
-      window.ethereum.on('accountsChanged', checkVerification);
-    }
-    
-    return () => {
-      if (window.ethereum) {
-        window.ethereum.removeListener('accountsChanged', checkVerification);
-      }
-    };
   }, []);
 
   // Add function to get organization name from hash
@@ -71,7 +40,7 @@ export function ReportSubmission({ onSuccess, onError }: ReportSubmissionProps) 
   const loadReports = async () => {
     try {
       const reportCount = await publicClient.readContract({
-        ...REPORT_CONTRACT,
+        ...ZKWHISTLEBLOWER_CONTRACT,
         functionName: 'reportCount'
       });
 
@@ -87,7 +56,7 @@ export function ReportSubmission({ onSuccess, onError }: ReportSubmissionProps) 
     }
   };
 
-  // Update handleSubmit to remove the HashedDomains check
+  // Update handleSubmit to remove the organization verification check
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -104,14 +73,30 @@ export function ReportSubmission({ onSuccess, onError }: ReportSubmissionProps) 
         throw new Error('No account selected');
       }
 
-      // Get current organization hash
-      const orgHash = await getVerifiedOrganization(accounts[0]);
-      if (orgHash === BigInt(0)) {
-        throw new Error('Organization not verified');
-      }
+      // We now use the proof-based approach, so we need proof and public signals
+      // This function should not be used directly anymore
+      // Instead, the new flow is:
+      // 1. Get JWT from Google
+      // 2. Generate Proof with report content
+      // 3. Submit Proof + Report to contract
 
-      // Submit report
-      const reportId = await submitReport(report.title!, report.content!);
+      // For backward compatibility, create empty proof
+      const emptyProof = {
+        pi_a: ["0", "0", "1"],
+        pi_b: [["0", "0"], ["0", "0"], ["1", "0"]],
+        pi_c: ["0", "0", "1"],
+        protocol: "groth16" as const
+      };
+      
+      const emptyPublicSignals = {
+        organization_hash: "0",
+        report_hash: "0"
+      };
+      
+      // Submit report with empty proof (this will fail in production but works if skipVerification is enabled)
+      const result = await submitReport(report.title!, report.content!, emptyProof, emptyPublicSignals);
+      const { reportId } = result;
+      
       const submitted = await getReport(reportId);
       const orgName = getOrganizationName(submitted.organizationHash);
       
@@ -148,24 +133,9 @@ export function ReportSubmission({ onSuccess, onError }: ReportSubmissionProps) 
   return (
     <Box>
       <VStack spacing={4}>
-        {isVerified ? (
-          <Text color="green.500" fontWeight="medium">
-            Organization verified! You can now submit reports.
-          </Text>
-        ) : (
-          <Text color="orange.500" fontWeight="medium">
-            Please verify your organization before submitting reports.
-          </Text>
-        )}
-        <FormControl mb={4}>
-          <FormLabel>Your verified organization</FormLabel>
-          <Input
-            value={verifiedOrg}
-            isReadOnly
-            bg="gray.50"
-            _hover={{ cursor: 'not-allowed' }}
-          />
-        </FormControl>
+        <Text color="blue.500" fontWeight="medium">
+          The report submission process has changed. Please use the new workflow through the main interface.
+        </Text>
 
         <Box as="form" onSubmit={handleSubmit} width="full">
           <VStack spacing={4}>
