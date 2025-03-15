@@ -9,8 +9,8 @@ export interface EmailJWTCircuitInputs {
   pubkey: bigint[];
   signature: bigint[];
   periodIndex: number;
-  emailDomainIndex: number;
-  emailDomainLength: number;
+  emailKeyIndex: number;
+  reportContentHash: bigint;
   jwt?: string;
 }
 
@@ -23,5 +23,6 @@ export interface CircuitProof {
   };
   publicSignals: {
     organization_hash: string;
+    report_hash: string;
   };
 }

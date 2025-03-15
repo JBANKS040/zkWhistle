@@ -5,7 +5,6 @@ import { Circle, HStack, Text, VStack, Button, Spinner, Box, Accordion, Accordio
 import { submitReport, getOrganizationName } from '@/helpers/contract-utils';
 import { CheckIcon, ExternalLinkIcon } from '@chakra-ui/icons';
 import { publicClient } from '@/lib/ethers';
-import { generateReportHash } from '@/helpers/proof-utils';
 
 type Status = 'pending' | 'success' | 'loading';
 
@@ -259,11 +258,11 @@ export function ProofStatus({ proof, onSubmitComplete, title = "", content = "" 
       {txHash && (
         <Box w="full" textAlign="center">
           <Link 
-            href={`https://base-sepolia.blockscout.com/tx/${txHash}`}
+            href={`https://sepolia.basescan.org/tx/${txHash}`}
             isExternal
             color="blue.500"
           >
-            View on Blockscout <ExternalLinkIcon mx="2px" />
+            View on Basescan <ExternalLinkIcon mx="2px" />
           </Link>
         </Box>
       )}

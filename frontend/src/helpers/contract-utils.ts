@@ -297,5 +297,5 @@ export async function verifyReportHashOnChain(title: string, content: string, ex
 
 // Helper function to get the explorer transaction URL
 export function getExplorerTransactionUrl(txHash: string): string {
-  return `https://base-sepolia.blockscout.com/tx/${txHash}`;
+  return `https://sepolia.basescan.org/tx/${txHash}`;
 } 

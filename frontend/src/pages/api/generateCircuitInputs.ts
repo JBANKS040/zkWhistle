@@ -15,17 +15,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     console.log('Backend: Generating circuit inputs for JWT:', jwt.slice(0, 20) + '...');
     
-    const [header] = jwt.split('.');
-    const { kid } = JSON.parse(Buffer.from(header, 'base64').toString());
+    const [header, payloadB64] = jwt.split('.');
+    const headerDecoded = JSON.parse(Buffer.from(header, 'base64').toString());
+    const payload = JSON.parse(Buffer.from(payloadB64, 'base64').toString());
+    
+    // Add payload debugging
+    console.log('JWT PAYLOAD DEBUG:', {
+      email: payload.email,
+      emailCharCodes: [...payload.email].map(c => c.charCodeAt(0))
+    });
+    
+    const { kid } = headerDecoded;
     const publicKey = await getGooglePublicKey(kid);
 
     const circuitInputs = await generateEmailJWTInputs(jwt, publicKey, reportTitle, reportContent);
     
-    console.log('Backend: Circuit inputs generated successfully:', {
-      messageLength: circuitInputs.message.length,
-      pubkeyLength: circuitInputs.pubkey.length,
-      signatureLength: circuitInputs.signature.length,
-      hasReportContent: !!circuitInputs.reportContentHash
+    console.log('EMAIL KEY DEBUG:', {
+      email: payload.email,
+      emailKeyIndex: circuitInputs.emailKeyIndex
     });
 
     return res.status(200).json({
@@ -34,8 +41,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       pubkey: circuitInputs.pubkey.map(n => n.toString()),
       signature: circuitInputs.signature.map(n => n.toString()),
       periodIndex: circuitInputs.periodIndex,
-      emailDomainIndex: circuitInputs.emailDomainIndex,
-      emailDomainLength: circuitInputs.emailDomainLength,
+      emailKeyIndex: circuitInputs.emailKeyIndex,
       reportContentHash: circuitInputs.reportContentHash.toString()
     });
 

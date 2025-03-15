@@ -9,8 +9,6 @@ import { submitReport, getReport, getOrganizationName } from '@/helpers/contract
 import { Report } from '@/types/report';
 import { publicClient } from '@/lib/ethers';
 import { ZKWHISTLEBLOWER_CONTRACT } from '@/config/contracts';
-import { HashedDomainsType } from '@/types/hashedDomains';
-import HashedDomains from '@/config/HashedDomains.json';
 
 enum FlowStep {
   ENTER_REPORT = 0,

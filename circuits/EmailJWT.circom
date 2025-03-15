@@ -12,8 +12,7 @@ template EmailWhistleblower() {
     signal input pubkey[17];     
     signal input signature[17];  
     signal input periodIndex;    
-    signal input emailDomainIndex;  
-    signal input emailDomainLength; 
+    signal input emailKeyIndex;  // Position of "email" field in payload
     signal input reportContentHash;
     
     // Output signals
@@ -22,13 +21,13 @@ template EmailWhistleblower() {
     
     // Calculate exact Base64 dimensions
     var maxB64PayloadLength = 1368;  // Next multiple of 4 after 1366
-    var maxPayloadLength = 1024;     // Desired decoded length
+    var maxPayloadLength = 1026;     // Updated to match JWT verifier output (was 1024)
     
     // JWT verification component
     component jwt = JWTVerifier(
         121,    // n - bits per chunk
         17,     // k - number of chunks
-        2048,    // maxMessageLength
+        2048,   // maxMessageLength
         344,    // maxB64HeaderLength
         1368    // maxB64PayloadLength - must be multiple of 4
     );
@@ -40,11 +39,10 @@ template EmailWhistleblower() {
     jwt.signature <== signature;
     jwt.periodIndex <== periodIndex;
     
-    // Extract domain using increased payload length
-    component domainExtractor = ExtractDomain(64, 1024);
-    domainExtractor.email <== jwt.payload;
-    domainExtractor.domainIndex <== emailDomainIndex;
-    domainExtractor.domainLength <== emailDomainLength;
+    // Extract domain directly from payload
+    component domainExtractor = ExtractDomainFromPayload(1026, 48); // Reduced from 64 to 48 for optimization
+    domainExtractor.payload <== jwt.payload;
+    domainExtractor.emailKeyIndex <== emailKeyIndex;
     
     // Connect outputs
     organization_hash <== domainExtractor.domain_hash;

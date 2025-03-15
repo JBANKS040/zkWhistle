@@ -36,8 +36,21 @@ export async function generateEmailJWTInputs(
     throw new Error('No email found in JWT payload');
   }
 
-  // Extract email domain info
-  const { domainIndex, domainLength } = extractEmailDomain(payload.email);
+  // Find email key position in the decoded payload
+  const decodedPayload = Buffer.from(payloadB64, 'base64url').toString();
+  
+  // Look for "email" with quotes to ensure we find the exact field
+  const emailKeyIndex = decodedPayload.indexOf('"email"');
+  
+  if (emailKeyIndex === -1) {
+    throw new Error('Email field not found in JWT payload');
+  }
+
+  console.log('EMAIL FIELD DEBUG:', {
+    emailKeyIndex,
+    email: payload.email,
+    decodedPayload: decodedPayload.substring(emailKeyIndex, emailKeyIndex + 50) + '...'
+  });
 
   // Prepare message for circuit
   const message = Buffer.from(`${headerB64}.${payloadB64}`);
@@ -70,15 +83,21 @@ export async function generateEmailJWTInputs(
     console.log('No report title or content provided, using 0 for reportContentHash');
   }
 
+  console.log('EMAIL-JWT-INPUTS DEBUG:', {
+    email: payload.email,
+    emailKeyIndex,
+    messageLength: message.length,
+    messagePaddedLength: messagePaddedLen
+  });
+
   return {
     message: Array.from(messagePadded).map(b => BigInt(b)),
     messageLength: messagePaddedLen,
     pubkey: pubkeyBigInts,
     signature: signatureBigInts,
     periodIndex: jwt.indexOf('.'),
-    emailDomainIndex: Number(domainIndex),
-    emailDomainLength: Number(domainLength),
+    emailKeyIndex,
     reportContentHash,
-    jwt // Include original JWT for verification
+    jwt
   };
 } 

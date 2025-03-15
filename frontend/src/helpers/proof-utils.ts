@@ -29,46 +29,8 @@ export function generateReportHash(title: string, content: string): string {
   return hash;
 }
 
-function extractEmailDomain(email: string) {
-  const atIndex = email.lastIndexOf('@');
-  if (atIndex === -1) return { domain: "", index: 0, length: 0 };
-  
-  const domain = email.slice(atIndex + 1);
-  return {
-    domain,
-    index: atIndex + 1,
-    length: domain.length
-  };
-}
-
-// Update the generateCircuitInputs function
-export async function generateCircuitInputs(jwt: string, reportContent: string) {
-  // Decode JWT to extract email
-  const [headerB64, payloadB64] = jwt.split('.');
-  const payload = JSON.parse(atob(payloadB64));
-  const email = payload.email || "";
-  
-  // Extract domain info consistently
-  const { domain, index: domainIndex, length: domainLength } = extractEmailDomain(email);
-  console.log(`Extracting domain: "${domain}" from email "${email}"`);
-  
-  console.log("Circuit inputs:", {
-    email: email,
-    domainPart: domain,
-    domainIndex: domainIndex,
-    domainLength: domainLength
-  });
-  
-  // Generate circuit inputs including domain parameters
-  const inputs = {
-    // ... existing fields
-    emailDomainIndex: domainIndex,
-    emailDomainLength: domainLength,
-    // ... rest of the inputs
-  };
-  
-  return inputs;
-}
+// Update the generateCircuitInputs function - Remove since we don't need it anymore
+// Circuit extracts domain directly from payload
 
 export async function generateProof(jwt: string, reportTitle: string = "", reportContent: string = "") {
   const key = {}
@@ -104,6 +66,7 @@ export async function generateProof(jwt: string, reportTitle: string = "", repor
       messageLength: inputsResponse.data.message?.length,
       pubkeyLength: inputsResponse.data.pubkey?.length,
       signatureLength: inputsResponse.data.signature?.length,
+      emailKeyIndex: inputsResponse.data.emailKeyIndex,
       hasReportContent: !!inputsResponse.data.reportContentHash,
       reportContentHash: inputsResponse.data.reportContentHash
     })
