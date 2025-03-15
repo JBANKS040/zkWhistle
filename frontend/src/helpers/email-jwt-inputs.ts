@@ -1,6 +1,5 @@
 import { RSAPublicKey } from './types';
 import { MAX_MESSAGE_LENGTH, RSA_N_BITS, RSA_K_CHUNKS } from './constants';
-import { extractEmailDomain } from './email-utils';
 import { sha256Pad } from '@zk-email/helpers';
 import { keccak256, toHex } from 'viem';
 
