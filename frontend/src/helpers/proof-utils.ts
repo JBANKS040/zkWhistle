@@ -1,6 +1,8 @@
 import axios from 'axios'
 import { jwtHandler } from './jwt-utils'
 import { keccak256, toHex } from 'viem'
+import { CIRCUIT_ARTIFACTS } from '@/config/circuits'
+import * as snarkjs from 'snarkjs'
 
 // Helper function to generate report hash consistently with the contract
 export function generateReportHash(title: string, content: string): string {
@@ -46,12 +48,7 @@ export async function generateProof(jwt: string, reportTitle: string = "", repor
     }
     
     // First call - generate circuit inputs
-    console.log('Step 1: Calling generateCircuitInputs with:', {
-      hasJwt: !!jwt,
-      reportTitle: reportTitle.slice(0, 10) + '...',
-      reportContentLength: reportContent?.length || 0
-    });
-    
+    console.log('Step 1: Calling generateCircuitInputs');
     const inputsResponse = await axios.post('/api/generateCircuitInputs', { 
       jwt: jwtHandler.get(key),
       reportTitle,
@@ -67,27 +64,23 @@ export async function generateProof(jwt: string, reportTitle: string = "", repor
       pubkeyLength: inputsResponse.data.pubkey?.length,
       signatureLength: inputsResponse.data.signature?.length,
       emailKeyIndex: inputsResponse.data.emailKeyIndex,
-      hasReportContent: !!inputsResponse.data.reportContentHash,
-      reportContentHash: inputsResponse.data.reportContentHash
+      hasReportContent: !!inputsResponse.data.reportContentHash
     })
     
-    // Second call - generate proof
-    console.log('Step 2: Calling proxyJwtProver with inputs');
-    const proverResponse = await axios.post('/api/proxyJwtProver', {
-      input: inputsResponse.data
-    })
-
-    if (!proverResponse.data?.proof || !proverResponse.data?.publicSignals) {
-      throw new Error('Invalid proof response from proxyJwtProver')
-    }
+    // Generate proof using IPFS circuit files
+    console.log('Step 2: Generating proof with snarkjs');
+    const { proof, publicSignals } = await snarkjs.groth16.fullProve(
+      inputsResponse.data,
+      CIRCUIT_ARTIFACTS.WASM_URL,
+      CIRCUIT_ARTIFACTS.ZKEY_URL
+    );
 
     console.log('Step 3: Proof generated successfully');
-    console.log('Public signals:', proverResponse.data.publicSignals);
     
-    // Create the formatted public signals, ensuring both values are present
+    // Create the formatted public signals
     const formattedPublicSignals = {
-      organization_hash: proverResponse.data.publicSignals.organization_hash || proverResponse.data.publicSignals[0] || "0",
-      report_hash: proverResponse.data.publicSignals.report_hash || proverResponse.data.publicSignals[1] || reportHash || "0"
+      organization_hash: publicSignals[0] || "0",
+      report_hash: publicSignals[1] || reportHash || "0"
     };
     
     console.log('Formatted public signals:', formattedPublicSignals);
@@ -101,11 +94,7 @@ export async function generateProof(jwt: string, reportTitle: string = "", repor
       console.warn('Warning: report_hash is 0, this might cause issues');
     }
 
-    // Return the proof with formatted public signals
-    return {
-      proof: proverResponse.data.proof,
-      publicSignals: formattedPublicSignals
-    }
+    return { proof, publicSignals: formattedPublicSignals };
   } catch (error: any) {
     console.error('Proof generation error:', {
       message: error.message,
@@ -118,22 +107,43 @@ export async function generateProof(jwt: string, reportTitle: string = "", repor
   }
 }
 
-// Helper function specifically for report submission
-export async function generateProofForReport(jwt: string, title: string, content: string) {
-  if (!title || !content) {
-    throw new Error('Report title and content are required');
+async function fetchWithFallback(mainUrl: string, fallbackUrls: string[]): Promise<ArrayBuffer> {
+  const urls = [mainUrl, ...fallbackUrls];
+  
+  for (const url of urls) {
+    try {
+      const response = await fetch(url);
+      if (response.ok) {
+        return await response.arrayBuffer();
+      }
+    } catch (error) {
+      console.warn(`Failed to fetch from ${url}:`, error);
+    }
   }
-  
-  console.log('Generating proof for report:', { title, contentLength: content.length });
-  const reportHash = generateReportHash(title, content);
-  console.log('Report hash:', reportHash);
-  
-  const proofResult = await generateProof(jwt, title, content);
-  
-  // Store the original title and content with the proof for later use
-  return {
-    ...proofResult,
-    originalTitle: title,
-    originalContent: content
-  };
+  throw new Error('Failed to fetch circuit artifact from all sources');
+}
+
+export async function generateProofForReport(jwt: string, title: string, content: string) {
+  try {
+    // Generate circuit inputs
+    const inputsResponse = await axios.post('/api/generateCircuitInputs', { 
+      jwt,
+      reportTitle: title,
+      reportContent: content
+    });
+    
+    const inputs = inputsResponse.data;
+
+    // Use IPFS URLs directly instead of fetching ArrayBuffers
+    const { proof, publicSignals } = await snarkjs.groth16.fullProve(
+      inputs,
+      CIRCUIT_ARTIFACTS.WASM_URL,
+      CIRCUIT_ARTIFACTS.ZKEY_URL
+    );
+
+    return { proof, publicSignals };
+  } catch (error) {
+    console.error('Error generating proof:', error);
+    throw error;
+  }
 }

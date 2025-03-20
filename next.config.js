@@ -10,6 +10,9 @@ const nextConfig = {
       path: false,
       os: false
     }
+    config.ignoreWarnings = [
+      { module: /node_modules\/web-worker/ }
+    ];
     return config
   },
   // Add configuration for large static files
@@ -17,10 +20,13 @@ const nextConfig = {
     largePageDataBytes: 800 * 1024 * 1024, // 800MB limit
   },
   // Optional: Configure headers for large files
+  images: {
+    domains: ['ipfs.io', 'cloudflare-ipfs.com', 'gateway.pinata.cloud'],
+  },
   async headers() {
     return [
       {
-        source: '/circuits/:path*',
+        source: '/:all*(svg|jpg|png)',
         headers: [
           {
             key: 'Cache-Control',

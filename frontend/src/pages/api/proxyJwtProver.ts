@@ -1,10 +1,9 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { groth16 } from 'snarkjs';
-import path from 'path';
 
-const CIRCUIT_FILES = {
-  wasm: path.join(process.cwd(), 'public/circuits/EmailJWT.wasm'),
-  zkey: path.join(process.cwd(), 'public/circuits/EmailJWT_final.zkey')
+const CIRCUIT_ARTIFACTS = {
+  WASM_URL: `https://ipfs.io/ipfs/bafybeifbrj6kkysc5h6ewsw7x7gaj7ie6k4ycv63ol6cen3acumlfp7odm/EmailJWT.wasm`,
+  ZKEY_URL: `https://ipfs.io/ipfs/bafybeiabhrxz4p225vwunus5muzznwgjyof7wyv4wxgjgrailwngemz63i/EmailJWT_final.zkey`
 };
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -29,8 +28,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const { proof, publicSignals } = await groth16.fullProve(
       input,
-      CIRCUIT_FILES.wasm,
-      CIRCUIT_FILES.zkey
+      CIRCUIT_ARTIFACTS.WASM_URL,
+      CIRCUIT_ARTIFACTS.ZKEY_URL
     );
 
     console.log('Backend: Proof generated successfully');
