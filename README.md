@@ -36,7 +36,19 @@ npm install -g circom
 # From project root
 cd circuits
 npm install
-npm run build
+
+# Download Powers of Tau file (22 powers)
+mkdir -p pot
+curl -o pot/powersOfTau28_hez_final_22.ptau https://hermez.s3-eu-west-1.amazonaws.com/powersOfTau28_hez_final_22.ptau
+
+# Generate zkey file
+snarkjs groth16 setup EmailJWT.r1cs pot/powersOfTau28_hez_final_22.ptau EmailJWT_final.zkey
+
+# Export verification key
+snarkjs zkey export verificationkey ./EmailJWT_final.zkey ./verification_key.json
+
+# Generate Solidity verifier
+snarkjs zkey export solidityverifier ./EmailJWT_final.zkey ../src/contracts/JwtGroth16Verifier.sol
 ```
 
 3. Copy circuit artifacts to public directory:
@@ -55,21 +67,10 @@ export const CIRCUIT_ARTIFACTS = {
 };
 ```
 
-5. Update proof generation in `frontend/src/pages/api/proxyJwtProver.ts`:
-```typescript
-import path from 'path';
-
-const CIRCUIT_FILES = {
-  wasm: path.join(process.cwd(), 'public/circuits/EmailJWT.wasm'),
-  zkey: path.join(process.cwd(), 'public/circuits/EmailJWT_final.zkey')
-};
-
-// In your handler function:
-const { proof, publicSignals } = await groth16.fullProve(
-  input,
-  CIRCUIT_FILES.wasm,
-  CIRCUIT_FILES.zkey
-);
+5. Deploy the contracts:
+```bash
+# Deploy to Base Sepolia
+forge script script/DeployZkWhistleblower.s.sol:DeployZkWhistleblower --rpc-url https://sepolia.base.org --broadcast --verify
 ```
 
 ### Circuit Parameters
